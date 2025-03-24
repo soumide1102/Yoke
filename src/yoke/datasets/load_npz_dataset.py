@@ -1,7 +1,18 @@
-"""Relating to the layered shaped charge data.
+#/usr/bin/env python
 
-Functions and classes for torch DataSets which sample the Layered Shaped Charge
-data, *lsc240420*.
+""" 
+
+Functions and classes for torch DataSets which sample 2D arrays from npz files 
+that corresponded to a pre-determined list of thermodynamic and kinetic variable 
+fields.
+
+Currently available datasets:
+- cylex (cx241203)
+
+Authors:
+Kyle Hickman
+Soumi De
+Bryan Kaiser
 
 """
 
@@ -18,72 +29,38 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 import itertools
+import re
 
 NoneStr = typing.Union[None, str]
 
 
-################################################
-# Functions for returning the run *key* from
-# the npz-file name
-################################################
-def LSCnpz2key(npz_file: str) -> str:
-    """Simulation key extraction.
-
-    Function to extract simulation *key* from the name of an .npz file.
-
-    A study key looks like **lsc240420_id00001** and a NPZ filename is like
-    **lsc240420_id00001_pvi_idx00000.npz**
-
+def combine_arrays_by_number(number_list, array_list):
+    """
+    Groups and combines arrays based on repeated numbers in the number_list.
+    
     Args:
-        npz_file (str): file path from working directory to .npz file
-
+    - number_list (list): List of numbers (can contain duplicates).
+    - array_list (list): List of NumPy arrays (same length as number_list).
+    
     Returns:
-        key (str): The correspond simulation key for the NPZ file.
-
+    - unique_numbers (list): Unique numbers from the number_list.
+    - combined_arrays (list): Corresponding combined arrays.
     """
-    key = npz_file.split("/")[-1].split("_pvi_")[0]
+    array_dict = {}  # Regular dictionary to store summed arrays
 
-    return key
+    for num, arr in zip(number_list, array_list):
+        if num in array_dict:
+            array_dict[num] += arr  # Sum arrays if the number is repeated
+        else:
+            array_dict[num] = arr  # First occurrence, store array
 
+    # Extract unique numbers and combined arrays
+    unique_numbers = list(array_dict.keys())
+    combined_arrays = list(array_dict.values())
 
-def LSCcsv2bspline_pts(design_file: str, key: str) -> np.ndarray:
-    """Function to extract the B-spline nodes.
+    return unique_numbers, combined_arrays
 
-    Nodes are extracted from the design .csv file given the study key.
-
-    Args:
-        design_file (str): File path from working directory to the .csv design file
-        key (str): The study information for a given simulation; of the
-                   form *lsc240420_id?????*
-
-    Returns:
-        bspline_pts (numpy array): The B-spline nodes defining the geometry of
-                                   the Layered Shaped Charge
-
-    """
-    design_df = pd.read_csv(design_file, sep=",", header=0, index_col=0, engine="python")
-
-    # removed spaces from headers
-    for col in design_df.columns:
-        design_df.rename(columns={col: col.strip()}, inplace=True)
-
-    bspline_pts = design_df.loc[key, "sa1":"ct7"].values
-
-    return bspline_pts.astype(float)
-
-
-def LSCread_npz(npz: np.lib.npyio.NpzFile, field: str) -> np.ndarray:
-    """Function to extract a value corresponding to an NPZ key.
-
-    Args:
-        npz (np.lib.npyio.NpzFile): a loaded .npz file
-        field (str): name of field to extract
-
-    """
-    return npz[field]
-
-
-def LSCread_npz_NaN(npz: np.lib.npyio.NpzFile, field: str) -> np.ndarray:
+def read_npz_NaN(npz: np.lib.npyio.NpzFile, field: str) -> np.ndarray:
     """Extract a specific field from a .npz file and replace NaNs with 0.
 
     Args:
@@ -96,511 +73,198 @@ def LSCread_npz_NaN(npz: np.lib.npyio.NpzFile, field: str) -> np.ndarray:
     """
     return np.nan_to_num(npz[field], nan=0.0)
 
+class labeledData:
+    """
+    A class to process datasets by relating input data to correct labels.
+    Use this to get correctly labeled hydro fields and channel maps
+    """
 
-class LSC_cntr2rho_DataSet(Dataset):
-    """Contour to average density dataset."""
+    def __init__(self, NPZ_DIR: str, CSV_DIR: str):
+        """
+        Initializes the dataset processor.
 
-    def __init__(self, LSC_NPZ_DIR: str, filelist: str, design_file: str) -> None:
-        """Initialization of class.
+        Parameters:
+        - NPZ_DIR (str): Path to the hydro field data file (NPZ).
+        - CSV_DIR (str): Path to the 'design' file (CSV).
+        """
+        self.NPZ_DIR = NPZ_DIR
+        self.CSV_DIR = CSV_DIR
 
-        The definition of a dataset object for the *Layered Shaped Charge* data
-        which produces pairs of B-spline contour-node vectors and simulation
-        times together with an average density field.
+        # Get the hydro_fields
+        self.get_study_and_key(self.NPZ_DIR)
+        if self.study == 'cx': # cylex dataset
+            self.hydro_field_names = [
+                    "xPosition", # 4 kinematic variable fields (To do: xPos and zPos will need to meshgridded)
+                    "zPosition",
+                    "Uvelocity",
+                    "Wvelocity",                
+                    "density_Air", # 39 thermodynamic variable fields:
+                    "energy_Air",
+                    "temp_Air",
+                    "density_Al",
+                    "energy_Al",
+                    "temp_Al",
+                    "density_Be",
+                    "energy_Be",
+                    "temp_Be",
+                    "density_Cu",
+                    "energy_Cu",
+                    "temp_Cu",
+                    "density_U.DU",
+                    "energy_U.DU",
+                    "temp_U.DU",
+                    "density_maincharge",
+                    "energy_maincharge",
+                    "temp_maincharge",
+                    "density_N",
+                    "energy_N",
+                    "temp_N",
+                    "density_Sn",
+                    "energy_Sn",
+                    "temp_Sn",
+                    "density_Steel.alloySS304L",
+                    "energy_Steel.alloySS304L",
+                    "temp_Steel.alloySS304L",
+                    "density_Polymer.Sylgard",
+                    "energy_Polymer.Sylgard",
+                    "temp_Polymer.Sylgard",
+                    "density_Ta",
+                    "energy_Ta",
+                    "temp_Ta",
+                    "density_Void",
+                    "energy_Void",
+                    "temp_Void",
+                    "density_Water",
+                    "energy_Water",
+                    "temp_Water",
+            ]
+
+            # # channel_map (later in_vars) integer labels for each field
+            self.channel_map = np.arange(0,len(self.hydro_field_names)) # <---------- CHANGE TO ONE HOT ENCODING
+
+            # get the material names that are present in this npz file
+            self.cylex_data_loader()
+
+        else:     
+            print('\n ERROR: hydro_field information unavailable for specified dataset.') 
+            print(' -> See load_npz_dataset.py\n')
+
+    def get_active_hydro_indices(self):
+        """
+        Returns the indices of self.active_hydro_field_names within self.hydro_field_names.
+        """
+        return [self.hydro_field_names.index(field) for field in self.active_hydro_field_names if field in self.hydro_field_names]
+
+    def cylex_data_loader(self, kinematic_variables=None, thermodynamic_variables=None):
+        """ Pairs the data arrays in the .npz file with the corresponding elements of 
+            hydro_field_names by using the columns in the .csv design file.
+        """
+        design_df = pd.read_csv(self.CSV_DIR, sep=",", header=0, index_col=0, engine="python")
+        
+        # removed spaces from headers:
+        for col in design_df.columns:
+            design_df.rename(columns={col: col.strip()}, inplace=True)    
+
+        # get the names of the non-HE material(s) from the design file:
+        non_HE_mats = design_df.loc[self.key, "wallMat":"backMat"].values
+        non_HE_mats = [m.strip() for m in non_HE_mats]  # Remove spaces before element names
+
+        # get the hydro_field_names and the corresponding channel indices for the given npz data:
+        self.channel_map = [] 
+        self.active_npz_field_names = []
+        self.active_hydro_field_names = []        
+        if kinematic_variables is None:
+            self.active_hydro_field_names = ['Uvelocity','Wvelocity'] 
+            self.active_npz_field_names   = self.active_hydro_field_names        
+        if thermodynamic_variables is None:
+                # wall and background materials:   
+                # In the csv file the materials are called as `wall_mat' and `back_mat' but in the npz files, back_mat is the material name. 
+                self.active_npz_field_names = np.append(self.active_npz_field_names,['density_wall','density_' + non_HE_mats[1]])  
+                self.active_hydro_field_names = np.append(self.active_hydro_field_names,['density_' + non_HE_mats[0],'density_' + non_HE_mats[1]])
+                # HE material:
+                self.active_npz_field_names = np.append(self.active_npz_field_names,['density_maincharge'])    
+                self.active_hydro_field_names = np.append(self.active_hydro_field_names,['density_maincharge'])  
+        self.channel_map = self.get_active_hydro_indices()
+
+        print(self.channel_map)
+        print(self.active_hydro_field_names)
+        print(self.active_npz_field_names)
+        return self.active_npz_field_names, self.active_hydro_field_names, self.channel_map  #<----- SOUMI: this function might have to return the above quanties?
+
+    def extract_letters(self, s) -> str:
+        match = re.match(r"([a-zA-Z]+)\d", s)  # Match letters at the beginning until the first digit
+        return match.group(1) if match else None
+
+    def get_study_and_key(self, npz_file: str) -> str:
+        """Simulation key extraction.
+
+        Function to extract simulation *key* from the name of an .npz file.
+
+        A study key looks like **lsc240420_id00001** and a NPZ filename is like
+        **lsc240420_id00001_pvi_idx00000.npz**
 
         Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files. A YOKE env variable.
-            filelist (str): Text file listing file names to read
-            design_file (str): .csv file with master design study parameters
+            npz_file (str): file path from working directory to .npz file
+
+        Returns:
+            key (str): The correspond simulation key for the NPZ file. E.g., 'cx241203_id01250'
+            study (str): The name of the study/dataset. E.g., 'cx'
 
         """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
-        self.filelist = filelist
-        self.design_file = design_file
+        self.key = npz_file.split("/")[-1].split("_pvi_")[0]
+        self.study = self.extract_letters(self.key)
 
-        # Create filelist
-        with open(filelist) as f:
-            self.filelist = [line.rstrip() for line in f]
+    def get_hydro_field_names(self) -> list[str]:
+        return self.hydro_field_names
 
-        self.Nsamples = len(self.filelist)
+    def get_channel_map(self) -> list[str]:
+        return self.channel_map
 
-    def __len__(self) -> int:
-        """Return number of samples in dataset."""
-        return self.Nsamples
+    def get_active_hydro_field_names(self) -> list[str]:
+        return self.active_hydro_field_names
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """Return a tuple of a batch's input and output data."""
-        # Rotate index if necessary
-        index = index % self.Nsamples
+    def get_active_npz_field_names(self) -> list[str]:
+        return self.active_npz_field_names
 
-        # Get the input image
-        filepath = self.filelist[index]
-        npz = np.load(self.LSC_NPZ_DIR + filepath)
-
-        true_image = LSCread_npz(npz, "av_density")
-        true_image = np.concatenate((np.fliplr(true_image), true_image), axis=1)
-        nY, nX = true_image.shape
-        true_image = true_image.reshape((1, nY, nX))
-        true_image = torch.tensor(true_image).to(torch.float32)
-
-        # Get the contours and sim_time
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + filepath)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-        sim_time = npz["sim_time"]
-        npz.close()
-
-        sim_params = np.append(Bspline_nodes, sim_time)
-        sim_params = torch.from_numpy(sim_params).to(torch.float32)
-
-        return sim_params, true_image
+    def get_channel_map(self) -> list[str]:
+        return self.channel_map
 
 
-class LSCnorm_cntr2rho_DataSet(Dataset):
-    """Normalized contour to average density dataset."""
+def process_channel_data(channel_map, img_list_combined, active_hydro_field_names): 
+    unique_channels = np.unique(channel_map)
+    if len(unique_channels) < len(channel_map):
+        #for i,img_list in enumerate(img_list_combined):
+        for i in np.arange(img_list_combined.shape[0]):
+            channel_map, img_list_combined[i] = combine_arrays_by_number(channel_map, img_list_combined[i])
+            #channel_map, end_img_list = combine_arrays_by_number(channel_map, end_img_list)       
+            print("process_channel_data channel_map shape=", channel_map.shape)
+        if channel_map != unique_channels:
+            print('\n ERROR: combination of repeated materials fail')
+        active_hydro_field_names = (np.unique(active_hydro_field_names)).tolist()
+    print("process_channel_data img_list=", img_list)
+    print("process_channel_data img_list=", img_list.shape)
+    return img_list_combined, channel_map, active_hydro_field_names
 
-    def __init__(
-        self, LSC_NPZ_DIR: str, filelist: str, design_file: str, normalization_file: str
-    ) -> None:
-        """Initialization of normalized dataset.
+#===============================================================================
 
-        The definition of a dataset object for the *Layered Shaped Charge* data
-        which produces pairs of B-spline contour-node vectors and simulation
-        times together with an average density field.
-
-        This class uses pre-calculated normalization constants to normalize the
-        geometry parameters and the density field. The time values are also
-        normalized to [0, 1] at regular intervals of 0.25 us.
-
-        This class relies on a normalization file created by the script
-        `applications/normalization/generate_lsc_normalization.py`
-
-        The normalization file is an NPZ created by the call:
-
-        np.savez('./lsc240420_norm.npz',
-                 image_avg=image_avg,
-                 image_min=image_min,
-                 image_max=image_max,
-                 Bspline_avg=Bspline_avg,
-                 Bspline_min=Bspline_min,
-                 Bspline_max=Bspline_max,
-                 **avg_time_dict)
-
-        Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files. A YOKE env variable.
-            filelist (str): Text file listing file names to read
-            design_file (str): .csv file with master design study parameters
-            normalization_file: Full-path to the NPZ file containing the pre-calculated
-                                normalization quantities.
-
-        """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
-        self.filelist = filelist
-        self.design_file = design_file
-        self.normalization_file = normalization_file
-
-        norm_npz = np.load(self.normalization_file)
-        time_keys = [k for k in norm_npz.keys()]
-        time_keys.remove("image_avg")
-        time_keys.remove("image_min")
-        time_keys.remove("image_max")
-        time_keys.remove("Bspline_avg")
-        time_keys.remove("Bspline_min")
-        time_keys.remove("Bspline_max")
-        self.time_keys = sorted([float(k) for k in time_keys])
-
-        self.avg_rho_by_time = dict()
-        for tk in self.time_keys:
-            self.avg_rho_by_time[str(tk)] = norm_npz[str(tk)]
-
-        self.Bspline_min = norm_npz["Bspline_min"]
-        self.Bspline_max = norm_npz["Bspline_max"]
-
-        # Create filelist
-        with open(filelist) as f:
-            self.filelist = [line.rstrip() for line in f]
-
-        self.Nsamples = len(self.filelist)
-
-    def __len__(self) -> int:
-        """Return number of samples in dataset."""
-        return self.Nsamples
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """Return a tuple of a batch's input and output data."""
-        # Rotate index if necessary
-        index = index % self.Nsamples
-
-        # Get the input image
-        filepath = self.filelist[index]
-        npz = np.load(self.LSC_NPZ_DIR + filepath)
-
-        # Get time associated with image
-        sim_time = npz["sim_time"]
-        round_sim_time = round(4.0 * sim_time) / 4.0
-
-        # Load image
-        true_image = LSCread_npz(npz, "av_density")
-        true_image = np.concatenate((np.fliplr(true_image), true_image), axis=1)
-        # unbias image
-        unbias_true_image = true_image - self.avg_rho_by_time[str(round_sim_time)]
-        # unbias_true_image = self.avg_rho_by_time[str(round_sim_time)]
-        nY, nX = unbias_true_image.shape
-        unbias_true_image = unbias_true_image.reshape((1, nY, nX))
-        unbias_true_image = torch.tensor(unbias_true_image).to(torch.float32)
-
-        # Get the contours and sim_time
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + filepath)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-
-        npz.close()
-
-        # Scale round_sim_time
-        norm_time = round_sim_time / 25.0
-
-        # Normalize Bspline nodes
-        norm_Bspline_nodes = (Bspline_nodes - self.Bspline_min) / (
-            self.Bspline_max - self.Bspline_min
-        )
-        norm_sim_params = np.append(norm_Bspline_nodes, norm_time)
-        norm_sim_params = torch.from_numpy(norm_sim_params).to(torch.float32)
-
-        return norm_sim_params, unbias_true_image
-
-
-class LSC_cntr2hfield_DataSet(Dataset):
-    """Contour to set of fields dataset."""
-
-    def __init__(
-        self,
-        LSC_NPZ_DIR: str,
-        filelist: str,
-        design_file: str,
-        field_list: list[str] = ["density_throw"],
-    ) -> None:
-        """Initialization of class.
-
-        The definition of a dataset object for the *Layered Shaped Charge* data
-        which produces B-spline contour-node vectors and a *hydro-dynamic
-        field* image consisting of channels specified in *field_list*.
-
-        Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files. A YOKE env variable.
-            filelist (str): Text file listing file names to read
-            design_file (str): Full-path to .csv file with master design study parameters
-            field_list (List[str]): List of hydro-dynamic fields to include as channels
-                                    in image.
-
-        """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
-        self.filelist = filelist
-        self.design_file = design_file
-        self.hydro_fields = field_list
-
-        # Create filelist
-        with open(filelist) as f:
-            self.filelist = [line.rstrip() for line in f]
-
-        # Shuffle the list of prefixes in-place
-        random.shuffle(self.filelist)
-
-        self.Nsamples = len(self.filelist)
-
-    def __len__(self) -> int:
-        """Return number of samples in dataset."""
-        return self.Nsamples
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """Return a tuple of a batch's input and output data."""
-        # Rotate index if necessary
-        index = index % self.Nsamples
-
-        # Get the input image
-        filepath = self.filelist[index]
-        npz = np.load(self.LSC_NPZ_DIR + filepath)
-
-        hfield_list = []
-        for hfield in self.hydro_fields:
-            tmp_img = LSCread_npz_NaN(npz, hfield)
-            hfield_list.append(tmp_img)
-
-        # Concatenate images channel first.
-        hfield = torch.tensor(np.stack(hfield_list, axis=0)).to(torch.float32)
-
-        # Get the contours and sim_time
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + filepath)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-        npz.close()
-
-        geom_params = torch.from_numpy(Bspline_nodes).to(torch.float32)
-
-        return geom_params, hfield
-
-
-def neg_mse_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """Negated MSE loss."""
-    return -torch.nn.functional.mse_loss(x, y)
-
-
-class LSC_hfield_reward_DataSet(Dataset):
-    """Hydro-field discrepancy reward dataset."""
+class rho2rho_temporal_DataSet(Dataset):
+    """Temporal density-to-density mapping dataset.
+    Maps hydrofield .npz data to correct material labels in .csv 'design' file.
+    """
 
     def __init__(
         self,
-        LSC_NPZ_DIR: str,
-        filelist: str,
-        design_file: str,
-        field_list: list[str] = ["density_throw"],
-        reward_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = neg_mse_loss,
-    ) -> None:
-        """Initialization of class.
-
-        The definition of a dataset object for the *Layered Shaped Charge* data
-        which produces tuples `(y', H', H*, -MSE(H', H*))`. `y'` is the vector
-        of B-spline contour-nodes. `H'` is the tensor of hydro-fields at final
-        time corresponding to `y'`. `H*` is a *target* tensor of hydro-fields
-        at final time, chosen randomly from the available training data.
-
-        A *value* network will be pre-trained from this dataset to use in a
-        *proximal policy optimization* (PPO) reinforcement learning algorithm.
-
-        Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files. A YOKE env variable.
-            filelist (str): Text file listing file names to read
-            design_file (str): Full-path to .csv file with master design study parameters
-            field_list (list[str]): List of hydro-dynamic fields to include as channels
-                                    in image.
-            reward_fn (Callable): Function taking two torch.tensor and returning a
-                                  scalar reward.
-
-        """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
-        self.filelist = filelist
-        self.design_file = design_file
-        self.hydro_fields = field_list
-        self.reward = reward_fn
-
-        # Create filelist
-        with open(filelist) as f:
-            self.filelist = [line.rstrip() for line in f]
-
-        # Create list of state-target pairs.
-        self.state_target_list = list(itertools.product(self.filelist, self.filelist))
-
-        # Shuffle the list of state-target pairs in-place
-        random.shuffle(self.state_target_list)
-
-        self.Nsamples = len(self.state_target_list)
-
-    def __len__(self) -> int:
-        """Return number of samples in dataset."""
-        return self.Nsamples
-
-    def __getitem__(
-        self, index: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Return a tuple of a batch's input and output data."""
-        # Rotate index if necessary
-        index = index % self.Nsamples
-
-        # Get the state-target pair
-        state, target = self.state_target_list[index]
-        state_npz = np.load(self.LSC_NPZ_DIR + state)
-        target_npz = np.load(self.LSC_NPZ_DIR + target)
-
-        state_hfield_list = []
-        target_hfield_list = []
-        for hfield in self.hydro_fields:
-            tmp_img = LSCread_npz_NaN(state_npz, hfield)
-            state_hfield_list.append(tmp_img)
-
-            tmp_img = LSCread_npz_NaN(target_npz, hfield)
-            target_hfield_list.append(tmp_img)
-
-        # Concatenate images channel first.
-        state_hfield = torch.tensor(np.stack(state_hfield_list, axis=0)).to(
-            torch.float32
-        )
-
-        target_hfield = torch.tensor(np.stack(target_hfield_list, axis=0)).to(
-            torch.float32
-        )
-
-        # Calculate reward.
-        #
-        # Make sure the reward computation isn't part of the torch
-        # computational graph which could happen if the reward function is a
-        # torch Loss.
-        with torch.no_grad():
-            reward = self.reward(state_hfield, target_hfield)
-
-        # Get the state contours
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + state)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-        state_npz.close()
-        target_npz.close()
-
-        state_geom_params = torch.from_numpy(Bspline_nodes).to(torch.float32)
-
-        return state_geom_params, state_hfield, target_hfield, reward
-
-
-class LSC_hfield_policy_DataSet(Dataset):
-    """Hydro-field policy dataset."""
-
-    def __init__(
-        self,
-        LSC_NPZ_DIR: str,
-        filelist: str,
-        design_file: str,
-        field_list: list[str] = ["density_throw"],
-    ) -> None:
-        """Initialization of class.
-
-        The definition of a dataset object for the *Layered Shaped Charge* data
-        which produces tuples `(y', H', H*, x=y*-y')`. `y'` is the vector of
-        B-spline contour-nodes. `H'` is the tensor of hydro-fields at final
-        time corresponding to `y'`. `H*` is a *target* tensor of hydro-fields
-        at final time, chosen randomly from the available training data. The
-        optimal *policy*, `x=y* - y'` is the prediction goal for this dataset.
-
-        A *policy* network will be pre-trained from this dataset to use in a
-        *proximal policy optimization* (PPO) reinforcement learning algorithm.
-
-        Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files. A YOKE env variable.
-            filelist (str): Text file listing file names to read
-            design_file (str): Full-path to .csv file with master design study parameters
-            field_list (list[str]): List of hydro-dynamic fields to include as channels
-                                    in image.
-
-        """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
-        self.filelist = filelist
-        self.design_file = design_file
-        self.hydro_fields = field_list
-
-        # Create filelist
-        with open(filelist) as f:
-            self.filelist = [line.rstrip() for line in f]
-
-        # Create list of state-target pairs.
-        self.state_target_list = list(itertools.product(self.filelist, self.filelist))
-
-        # Shuffle the list of state-target pairs in-place
-        random.shuffle(self.state_target_list)
-
-        self.Nsamples = len(self.state_target_list)
-
-    def __len__(self) -> int:
-        """Return number of samples in dataset."""
-        return self.Nsamples
-
-    def __getitem__(
-        self, index: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Return a tuple of a batch's input and output data."""
-        # Rotate index if necessary
-        index = index % self.Nsamples
-
-        # Get the state-target pair
-        state, target = self.state_target_list[index]
-        state_npz = np.load(self.LSC_NPZ_DIR + state)
-        target_npz = np.load(self.LSC_NPZ_DIR + target)
-
-        state_hfield_list = []
-        target_hfield_list = []
-        for hfield in self.hydro_fields:
-            tmp_img = LSCread_npz_NaN(state_npz, hfield)
-            state_hfield_list.append(tmp_img)
-
-            tmp_img = LSCread_npz_NaN(target_npz, hfield)
-            target_hfield_list.append(tmp_img)
-
-        # Concatenate images channel first.
-        state_hfield = torch.tensor(np.stack(state_hfield_list, axis=0)).to(
-            torch.float32
-        )
-
-        target_hfield = torch.tensor(np.stack(target_hfield_list, axis=0)).to(
-            torch.float32
-        )
-
-        # Get the contour parameters
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + state)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-        state_geom_params = torch.from_numpy(Bspline_nodes).to(torch.float32)
-
-        sim_key = LSCnpz2key(self.LSC_NPZ_DIR + target)
-        Bspline_nodes = LSCcsv2bspline_pts(self.design_file, sim_key)
-        target_geom_params = torch.from_numpy(Bspline_nodes).to(torch.float32)
-
-        state_npz.close()
-        target_npz.close()
-
-        # Calculate optimal policy step
-        geom_discrepancy = target_geom_params - state_geom_params
-
-        return state_geom_params, state_hfield, target_hfield, geom_discrepancy
-
-
-class LSC_rho2rho_temporal_DataSet(Dataset):
-    """Temporal LSC dataset."""
-
-    def __init__(
-        self,
-        LSC_NPZ_DIR: str,
+        NPZ_DIR: str,
+        CSV_DIR: str, # <--- bkaiser
         file_prefix_list: str,
         max_timeIDX_offset: int,
         max_file_checks: int,
         half_image: bool = True,
-        hydro_fields: np.array = np.array(
-            [
-                "density_Air",
-                "density_Al",
-                "density_Be",
-                "density_Cu",
-                "density_N",
-                "density_Polymer.Sylgard", 
-                "density_Sn",
-                "density_Steel.alloySS304L",
-                "density_Ta",
-                "density_U.DU",
-                "density_Water",
-                "energy_Air",
-                "energy_Al",
-                "energy_Be",
-                "energy_Cu",
-                "energy_N",
-                "energy_Polymer.Sylgard",
-                "energy_Sn",
-                "energy_Steel.alloySS304L",
-                "energy_Ta",
-                "energy_U.DU",
-                "energy_Water",
-                "temperature_Air",
-                "temperature_Al",
-                "temperature_Be",
-                "temperature_Cu",
-                "temperature_N",
-                "temperature_Polymer.Sylgard",
-                "temperature_Sn",
-                "temperature_Steel.alloySS304L",
-                "temperature_Ta",
-                "temperature_U.DU",
-                "temperature_Water",
-                "Uvelocity",
-                "Wvelocity",
-            ]
-        ),
-    ) -> None:
+    ) -> None:  
         """Initialization of timestep dataset.
 
         This dataset returns multi-channel images at two different times from
-        the *Layered Shaped Charge* simulation. The *maximum time-offset* can
+        a simulation. The *maximum time-offset* can
         be specified. The channels in the images returned are the densities for
         each material at a given time as well as the (R, Z)-velocity
         fields. The time-offset between the two images is also returned.
@@ -609,7 +273,8 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
         being less than or equal to 3 in the lsc240420 data.
 
         Args:
-            LSC_NPZ_DIR (str): Location of LSC NPZ files.
+            NPZ_DIR (str): Location of LSC NPZ files.
+            CSV_DIR (str): Path to the 'design' file (CSV).
             file_prefix_list (str): Text file listing unique prefixes corresponding
                                     to unique simulations.
             max_timeIDX_offset (int): Maximum timesteps-ahead to attempt
@@ -622,21 +287,10 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
             half_image (bool): If True then returned images are NOT reflected about axis
                                of symmetry and half-images are returned instead.
             hydro_fields (np.array, optional): Array of hydro field names to be included.
-                                               Defaults to:
-                                               [
-                                                   "density_case",
-                                                   "density_cushion",
-                                                   "density_maincharge",
-                                                   "density_outside_air",
-                                                   "density_striker",
-                                                   "density_throw",
-                                                   "Uvelocity",
-                                                   "Wvelocity",
-                                               ].
 
         """
-        # Model Arguments
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
+        self.CSV_DIR = CSV_DIR 
+        self.NPZ_DIR = NPZ_DIR
         self.max_timeIDX_offset = max_timeIDX_offset
         self.max_file_checks = max_file_checks
         self.half_image = half_image
@@ -647,10 +301,11 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
 
         # Shuffle the list of prefixes in-place
         random.shuffle(self.file_prefix_list)
-
         self.Nsamples = len(self.file_prefix_list)
 
-        self.hydro_fields = hydro_fields
+        self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
+        self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
+        self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map() 
 
         # Initialize random number generator for time index selection
         self.rng = np.random.default_rng()
@@ -687,8 +342,8 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
                 end_file = file_prefix + f"_pvi_idx{endIDX:05d}.npz"
 
                 # Check if both files exist
-                start_file_path = Path(self.LSC_NPZ_DIR + start_file)
-                end_file_path = Path(self.LSC_NPZ_DIR + end_file)
+                start_file_path = Path(self.NPZ_DIR + start_file)
+                end_file_path = Path(self.NPZ_DIR + end_file)
 
                 if start_file_path.is_file() and end_file_path.is_file():
                     prefix_loop_break = True
@@ -698,7 +353,7 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
 
             if attempt == self.max_file_checks:
                 fnf_msg = (
-                    "In LSC_rho2rho_temporal_DataSet, "
+                    "In rho2rho_temporal_DataSet, "
                     "max_file_checks "
                     f"reached for prefix: {file_prefix}"
                 )
@@ -718,19 +373,19 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
 
         # Load NPZ files. Raise exceptions if file is not able to be loaded.
         try:
-            start_npz = np.load(self.LSC_NPZ_DIR + start_file)
+            start_npz = np.load(self.NPZ_DIR + start_file)
         except Exception as e:
             print(
-                f"Error loading start file: {self.LSC_NPZ_DIR + start_file}",
+                f"Error loading start file: {self.NPZ_DIR + start_file}",
                 file=sys.stderr,
             )
             raise e
 
         try:
-            end_npz = np.load(self.LSC_NPZ_DIR + end_file)
+            end_npz = np.load(self.NPZ_DIR + end_file)
         except Exception as e:
             print(
-                f"Error loading end file: {self.LSC_NPZ_DIR + end_file}",
+                f"Error loading end file: {self.NPZ_DIR + end_file}",
                 file=sys.stderr,
             )
             start_npz.close()
@@ -738,20 +393,32 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
 
         start_img_list = []
         end_img_list = []
-        for hfield in self.hydro_fields:
-            tmp_img = LSCread_npz_NaN(start_npz, hfield)
+
+        for hfield in self.active_npz_field_names: 
+            tmp_img = read_npz_NaN(start_npz, hfield) 
+            print("tmp_img start shape=", tmp_img.shape)  # SOUMI
             if not self.half_image:
                 tmp_img = np.concatenate((np.fliplr(tmp_img), tmp_img), axis=1)
             start_img_list.append(tmp_img)
 
-            tmp_img = LSCread_npz_NaN(end_npz, hfield)
+            tmp_img = read_npz_NaN(end_npz, hfield)
+            print("tmp_img end shape=", tmp_img.shape)  # SOUMI
             if not self.half_image:
                 tmp_img = np.concatenate((np.fliplr(tmp_img), tmp_img), axis=1)
             end_img_list.append(tmp_img)
 
+        img_list_combined = np.array([start_img_list, end_img_list])
+        img_list_combined, channel_map, active_hydro_field_names = process_channel_data(self.channel_map, img_list_combined, self.active_hydro_field_names)
+        start_img_list = img_list_combined[0]
+        end_img_list = img_list_combined[1]
+        self.channel_map = channel_map
+        self.active_hydro_field_names = active_hydro_field_names
+ 
         # Concatenate images channel first.
         start_img = torch.tensor(np.stack(start_img_list, axis=0)).to(torch.float32)
         end_img = torch.tensor(np.stack(end_img_list, axis=0)).to(torch.float32)
+        print("start_img shape=", start_img.shape)
+        print("end_emg shape=", end_img.shape)
 
         # Get the time offset
         Dt = torch.tensor(0.25 * (endIDX - startIDX), dtype=torch.float32)
@@ -760,16 +427,15 @@ class LSC_rho2rho_temporal_DataSet(Dataset):
         start_npz.close()
         end_npz.close()
 
-        return start_img, end_img, Dt
+        return start_img, end_img, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS, FOR BOTH START_IMG AND END_IMG
 
-
-class LSC_rho2rho_sequential_DataSet(Dataset):
-    """Returns a sequence of consecutive frames from the LSC simulation.
+class rho2rho_sequential_DataSet(Dataset):
+    """Returns a sequence of consecutive frames from a simulation.
 
     For example, if seq_len=4, you'll get frames t, t+1, t+2, t+3.
 
     Args:
-        LSC_NPZ_DIR (str): Location of LSC NPZ files.
+        NPZ_DIR (str): Location of NPZ files.
         file_prefix_list (str): Text file listing unique prefixes corresponding
                                 to unique simulations.
         max_file_checks (int): Maximum number of attempts to find valid file sequences.
@@ -781,19 +447,19 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
 
     def __init__(
         self,
-        LSC_NPZ_DIR: str,
+        NPZ_DIR: str,
         file_prefix_list: str,
         max_file_checks: int,
         seq_len: int,
         half_image: bool = True,
     ) -> None:
-        """Initialization for LSC sequential dataset."""
-        dir_path = Path(LSC_NPZ_DIR)
+        """Initialization for sequential dataset."""
+        dir_path = Path(NPZ_DIR)
         # Ensure the directory exists and is indeed a directory
         if not dir_path.is_dir():
-            raise FileNotFoundError(f"Directory not found: {LSC_NPZ_DIR}")
+            raise FileNotFoundError(f"Directory not found: {NPZ_DIR}")
 
-        self.LSC_NPZ_DIR = LSC_NPZ_DIR
+        self.NPZ_DIR = NPZ_DIR
         self.max_file_checks = max_file_checks
         self.seq_len = seq_len
         self.half_image = half_image
@@ -807,43 +473,9 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
         self.Nsamples = len(self.file_prefix_list)
 
         # Fields to extract from the simulation
-        self.hydro_fields = [
-            "density_Air",
-            "density_Al",
-            "density_Be",
-            "density_Cu",
-            "density_N",
-            "density_Polymer.Sylgard",
-            "density_Sn",
-            "density_Steel.alloySS304L",
-            "density_Ta",
-            "density_U.DU",
-            "density_Water",
-            "energy_Air",
-            "energy_Al",
-            "energy_Be",
-            "energy_Cu",
-            "energy_N",
-            "energy_Polymer.Sylgard",
-            "energy_Sn",
-            "energy_Steel.alloySS304L",
-            "energy_Ta",
-            "energy_U.DU",
-            "energy_Water",
-            "temperature_Air",
-            "temperature_Al",
-            "temperature_Be",
-            "temperature_Cu",
-            "temperature_N",
-            "temperature_Polymer.Sylgard",
-            "temperature_Sn",
-            "temperature_Steel.alloySS304L",
-            "temperature_Ta",
-            "temperature_U.DU",
-            "temperature_Water",
-            "Uvelocity",
-            "Wvelocity",
-        ]
+        self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
+        self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
+        self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map()
 
         # Random number generator
         self.rng = np.random.default_rng()
@@ -870,7 +502,7 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
             for offset in range(self.seq_len):
                 idx = startIDX + offset
                 file_name = f"{file_prefix}_pvi_idx{idx:05d}.npz"
-                file_path = Path(self.LSC_NPZ_DIR, file_name)
+                file_path = Path(self.NPZ_DIR, file_name)
 
                 if not file_path.is_file():
                     valid_sequence = False
@@ -901,8 +533,8 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
                 raise RuntimeError(f"Error loading file: {file_path}") from e
 
             field_imgs = []
-            for hfield in self.hydro_fields:
-                tmp_img = LSCread_npz_NaN(data_npz, hfield)
+            for hfield in self.active_npz_field_names: # <--- changed from hydro_fields, bkaiser.
+                tmp_img = read_npz_NaN(start_npz, hfield)             
 
                 # Reflect image if not half_image
                 if not self.half_image:
@@ -911,6 +543,12 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
                 field_imgs.append(tmp_img)
 
             data_npz.close()
+
+            img_list_combined = np.array([field_imgs])
+            img_list_combined, channel_map, active_hydro_field_names = process_channel_data(self.channel_map, img_list_combined, self.active_hydro_field_names)
+            field_imgs = img_list_combined[0]
+            self.channel_map = channel_map
+            self.active_hydro_field_names = active_hydro_field_names
 
             # Stack the fields for this frame
             field_tensor = torch.tensor(
@@ -924,4 +562,60 @@ class LSC_rho2rho_sequential_DataSet(Dataset):
         # Fixed time offset
         Dt = torch.tensor(0.25, dtype=torch.float32)
 
-        return img_seq, Dt
+
+        return img_seq, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS 
+
+#==============================================================================        
+
+# tests to be removed:
+
+# print('\n Should be Al wall and Void background: ')
+# labeledData('./cx241203_id00023_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Be wall and Void background: ')
+# labeledData('./cx241203_id00054_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be U.DU wall and Polymer.Sylgard background: ')
+# labeledData('./cx241203_id00750_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be U.DU wall and Steel.alloySS304L background: ')
+# labeledData('./cx241203_id00792_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Ta wall and Sn background: ')
+# labeledData('./cx241203_id01250_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Steel.alloySS304L wall and U.DU background: ')
+# labeledData('./cx241203_id01388_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Steel.alloySS304L wall and Steel.alloySS304L background: ')
+# labeledData('./cx241203_id01455_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Steel.alloySS304L wall and Air background: ')
+# labeledData('./cx241203_id01531_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Steel.alloySS304L wall and Water background: ')
+# labeledData('./cx241203_id01551_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Sn wall and U.DU background: ')
+# labeledData('./cx241203_id01615_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+# print('\n Should be Air wall and N background: ')
+# labeledData('./cx241203_id02388_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+
+
+# # Example Usage:
+# number_list = [1, 2, 1, 3, 2]
+# array_list = [
+#     np.array([[1, 2], [3, 4]]),  # 1st occurrence of 1
+#     np.array([[5, 6], [7, 8]]),  # 1st occurrence of 2
+#     np.array([[10, 20], [30, 40]]),  # 2nd occurrence of 1 (should be added)
+#     np.array([[9, 10], [11, 12]]),  # 1st occurrence of 3
+#     np.array([[50, 60], [70, 80]])  # 2nd occurrence of 2 (should be added)
+# ]
+
+# unique_numbers, combined_arrays = combine_arrays_by_number(number_list, array_list)
+
+# # Print Output
+# print("Unique Numbers:", unique_numbers)
+# for i, arr in enumerate(combined_arrays):
+#     print(f"Array for {unique_numbers[i]}:\n{arr}\n")
