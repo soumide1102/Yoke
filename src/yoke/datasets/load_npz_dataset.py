@@ -87,8 +87,11 @@ class labeledData:
         - NPZ_DIR (str): Path to the hydro field data file (NPZ).
         - CSV_DIR (str): Path to the 'design' file (CSV).
         """
-        self.NPZ_DIR = NPZ_DIR
+        self.NPZ_DIR = NPZ_DIR # THIS IS ACTUALLY A FILE !!
         self.CSV_DIR = CSV_DIR
+        #print(' self.NPZ_DIR = ',self.NPZ_DIR)
+        #print(' self.CSV_DIR = ',self.CSV_DIR)
+   
 
         # Get the hydro_fields
         self.get_study_and_key(self.NPZ_DIR)
@@ -189,7 +192,7 @@ class labeledData:
         print(self.channel_map)
         print(self.active_hydro_field_names)
         print(self.active_npz_field_names)
-        return self.active_npz_field_names, self.active_hydro_field_names, self.channel_map  #<----- SOUMI: this function might have to return the above quanties?
+        #return self.active_npz_field_names, self.active_hydro_field_names, self.channel_map  #<----- SOUMI: this function might have to return the above quanties?
 
     def extract_letters(self, s) -> str:
         match = re.match(r"([a-zA-Z]+)\d", s)  # Match letters at the beginning until the first digit
@@ -213,6 +216,8 @@ class labeledData:
         """
         self.key = npz_file.split("/")[-1].split("_pvi_")[0]
         self.study = self.extract_letters(self.key)
+        #print('self.study = ',self.study)
+        #print('self.key = ',self.key)
 
     def get_hydro_field_names(self) -> list[str]:
         return self.hydro_field_names
@@ -247,8 +252,8 @@ def process_channel_data(channel_map, img_list_combined, active_hydro_field_name
 
 #===============================================================================
 
-class rho2rho_temporal_DataSet(Dataset):
-    """Temporal density-to-density mapping dataset.
+class temporal_DataSet(Dataset):
+    """Temporal field-to-field mapping dataset.
     Maps hydrofield .npz data to correct material labels in .csv 'design' file.
     """
 
@@ -303,9 +308,10 @@ class rho2rho_temporal_DataSet(Dataset):
         random.shuffle(self.file_prefix_list)
         self.Nsamples = len(self.file_prefix_list)
 
-        self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
-        self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
-        self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map() 
+        ## These will change from simulation key to key:
+        #self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
+        #self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
+        #self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map() 
 
         # Initialize random number generator for time index selection
         self.rng = np.random.default_rng()
@@ -353,7 +359,7 @@ class rho2rho_temporal_DataSet(Dataset):
 
             if attempt == self.max_file_checks:
                 fnf_msg = (
-                    "In rho2rho_temporal_DataSet, "
+                    "In temporal_DataSet, "
                     "max_file_checks "
                     f"reached for prefix: {file_prefix}"
                 )
@@ -374,6 +380,12 @@ class rho2rho_temporal_DataSet(Dataset):
         # Load NPZ files. Raise exceptions if file is not able to be loaded.
         try:
             start_npz = np.load(self.NPZ_DIR + start_file)
+
+            # These will change from simulation key to key:
+            self.active_hydro_field_names = labeledData(self.NPZ_DIR+start_file,self.CSV_DIR).get_active_hydro_field_names() 
+            self.active_npz_field_names = labeledData(self.NPZ_DIR_start_file,self.CSV_DIR).get_active_npz_field_names() 
+            self.channel_map = labeledData(self.NPZ_DIR_start_file,self.CSV_DIR).get_channel_map() 
+
         except Exception as e:
             print(
                 f"Error loading start file: {self.NPZ_DIR + start_file}",
@@ -382,7 +394,12 @@ class rho2rho_temporal_DataSet(Dataset):
             raise e
 
         try:
-            end_npz = np.load(self.NPZ_DIR + end_file)
+            end_npz = np.load(self.NPZ_DIR + end_file) 
+
+            # For now, we assume that the start and end files have the same materials, etc 
+            # (it's hard to imagine a physical scenario in which Cu emerges from nothing,
+            #  but hey, we're not comparing with experiment so anything goes!) 
+
         except Exception as e:
             print(
                 f"Error loading end file: {self.NPZ_DIR + end_file}",
@@ -429,7 +446,7 @@ class rho2rho_temporal_DataSet(Dataset):
 
         return start_img, end_img, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS, FOR BOTH START_IMG AND END_IMG
 
-class rho2rho_sequential_DataSet(Dataset):
+class sequential_DataSet(Dataset):
     """Returns a sequence of consecutive frames from a simulation.
 
     For example, if seq_len=4, you'll get frames t, t+1, t+2, t+3.
@@ -473,9 +490,9 @@ class rho2rho_sequential_DataSet(Dataset):
         self.Nsamples = len(self.file_prefix_list)
 
         # Fields to extract from the simulation
-        self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
-        self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
-        self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map()
+        #self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
+        #self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
+        #self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map()
 
         # Random number generator
         self.rng = np.random.default_rng()
@@ -529,6 +546,12 @@ class rho2rho_sequential_DataSet(Dataset):
         for file_path in file_paths:
             try:
                 data_npz = np.load(file_path)
+
+                # Fields to extract from the simulation
+                self.active_hydro_field_names = labeledData(file_path,self.CSV_DIR).get_active_hydro_field_names()
+                self.active_npz_field_names = labeledData(file_path,self.CSV_DIR).get_active_npz_field_names()
+                self.channel_map = labeledData(file_path,self.CSV_DIR).get_channel_map()
+
             except Exception as e:
                 raise RuntimeError(f"Error loading file: {file_path}") from e
 
@@ -562,15 +585,18 @@ class rho2rho_sequential_DataSet(Dataset):
         # Fixed time offset
         Dt = torch.tensor(0.25, dtype=torch.float32)
 
-
         return img_seq, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS 
 
 #==============================================================================        
 
 # tests to be removed:
 
-# print('\n Should be Al wall and Void background: ')
-# labeledData('./cx241203_id00023_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
+#csv_file = '/lustre/scratch5/exempt/artimis/mpmm/design_cx241203_MASTER.csv' 
+
+#print('\n Should be Al wall and Void background: ')
+#labeledData('/lustre/scratch5/exempt/artimis/mpmm/cx241203/cx241203_id00023/cx241203_id00023_pvi_idx00001.npz',csv_file)
+
+# if you want to test the others (below) they need to look like above:
 
 # print('\n Should be Be wall and Void background: ')
 # labeledData('./cx241203_id00054_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
