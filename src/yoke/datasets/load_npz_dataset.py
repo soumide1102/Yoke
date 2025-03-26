@@ -382,9 +382,9 @@ class temporal_DataSet(Dataset):
             start_npz = np.load(self.NPZ_DIR + start_file)
 
             # These will change from simulation key to key:
-            self.active_hydro_field_names = labeledData(self.NPZ_DIR+start_file,self.CSV_DIR).get_active_hydro_field_names() 
-            self.active_npz_field_names = labeledData(self.NPZ_DIR_start_file,self.CSV_DIR).get_active_npz_field_names() 
-            self.channel_map = labeledData(self.NPZ_DIR_start_file,self.CSV_DIR).get_channel_map() 
+            self.active_hydro_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_active_hydro_field_names() 
+            self.active_npz_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_active_npz_field_names() 
+            self.channel_map = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_channel_map() 
 
         except Exception as e:
             print(
