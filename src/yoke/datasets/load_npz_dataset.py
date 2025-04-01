@@ -404,7 +404,7 @@ class temporal_DataSet(Dataset):
         img_list_combined, channel_map, active_hydro_field_names = process_channel_data(channel_map, img_list_combined, self.active_hydro_field_names)
         start_img_list = img_list_combined[0]
         end_img_list = img_list_combined[1]
-        self.channel_map = channel_map  #<-- SOUMI: If channel_map and active_hydro_field_names are updated inside the loop above through process_channel_data, I feel they should be defined as instance attributes once we have a final value outside the loop, Bryan please check
+        self.channel_map = channel_map
         self.active_hydro_field_names = active_hydro_field_names
  
         # Concatenate images channel first.
@@ -552,7 +552,7 @@ class sequential_DataSet(Dataset):
             )
             frames.append(field_tensor)
 
-        self.channel_map = channel_map  #<-- SOUMI: If channel_map and active_hydro_field_names are updated multiple times inside the loop above through process_channel_data, I feel they should be defined once we have a final value outside the loop, Bryan please check
+        self.channel_map = channel_map
         self.active_hydro_field_names = active_hydro_field_names
 
         # Combine frames into a single tensor of shape [seq_len, num_fields, H, W]
@@ -562,5 +562,5 @@ class sequential_DataSet(Dataset):
         Dt = torch.tensor(0.25, dtype=torch.float32)
 
 
-        return img_seq, Dt, self.channel_map  #<-- Bryan please check
+        return img_seq, Dt, self.channel_map
 
