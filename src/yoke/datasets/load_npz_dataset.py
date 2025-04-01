@@ -87,7 +87,7 @@ class labeledData:
         - NPZ_FILEPATH (str): Path to the hydro field data file (NPZ).
         - CSV_FILEPATH (str): Path to the 'design' file (CSV).
         """
-        self.NPZ_FILEPATH = NPZ_FILEPATH # THIS IS ACTUALLY A FILE !!
+        self.NPZ_FILEPATH = NPZ_FILEPATH
         self.CSV_FILEPATH = CSV_FILEPATH
 
         # Get the hydro_fields
