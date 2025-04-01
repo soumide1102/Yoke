@@ -10,7 +10,7 @@ Currently available datasets:
 - cylex (cx241203)
 
 Authors:
-Kyle Hickman
+Kyle Hickmann
 Soumi De
 Bryan Kaiser
 
@@ -79,22 +79,19 @@ class labeledData:
     Use this to get correctly labeled hydro fields and channel maps
     """
 
-    def __init__(self, NPZ_DIR: str, CSV_DIR: str):
+    def __init__(self, NPZ_FILEPATH: str, CSV_FILEPATH: str):
         """
         Initializes the dataset processor.
 
         Parameters:
-        - NPZ_DIR (str): Path to the hydro field data file (NPZ).
-        - CSV_DIR (str): Path to the 'design' file (CSV).
+        - NPZ_FILEPATH (str): Path to the hydro field data file (NPZ).
+        - CSV_FILEPATH (str): Path to the 'design' file (CSV).
         """
-        self.NPZ_DIR = NPZ_DIR # THIS IS ACTUALLY A FILE !!
-        self.CSV_DIR = CSV_DIR
-        #print(' self.NPZ_DIR = ',self.NPZ_DIR)
-        #print(' self.CSV_DIR = ',self.CSV_DIR)
-   
+        self.NPZ_FILEPATH = NPZ_FILEPATH # THIS IS ACTUALLY A FILE !!
+        self.CSV_FILEPATH = CSV_FILEPATH
 
         # Get the hydro_fields
-        self.get_study_and_key(self.NPZ_DIR)
+        self.get_study_and_key(self.NPZ_FILEPATH)
         if self.study == 'cx': # cylex dataset
             self.hydro_field_names = [
                     "xPosition", # 4 kinematic variable fields (To do: xPos and zPos will need to meshgridded)
@@ -143,7 +140,7 @@ class labeledData:
             ]
 
             # # channel_map (later in_vars) integer labels for each field
-            self.channel_map = np.arange(0,len(self.hydro_field_names)) # <---------- CHANGE TO ONE HOT ENCODING
+            self.channel_map = np.arange(0,len(self.hydro_field_names))
 
             # get the material names that are present in this npz file
             self.cylex_data_loader()
@@ -189,11 +186,6 @@ class labeledData:
                 self.active_hydro_field_names = np.append(self.active_hydro_field_names,['density_maincharge'])  
         self.channel_map = self.get_active_hydro_indices()
 
-        print(self.channel_map)
-        print(self.active_hydro_field_names)
-        print(self.active_npz_field_names)
-        #return self.active_npz_field_names, self.active_hydro_field_names, self.channel_map  #<----- SOUMI: this function might have to return the above quanties?
-
     def extract_letters(self, s) -> str:
         match = re.match(r"([a-zA-Z]+)\d", s)  # Match letters at the beginning until the first digit
         return match.group(1) if match else None
@@ -207,17 +199,15 @@ class labeledData:
         **lsc240420_id00001_pvi_idx00000.npz**
 
         Args:
-            npz_file (str): file path from working directory to .npz file
+            npz_filepath (str): file path from working directory to .npz file
 
         Returns:
             key (str): The correspond simulation key for the NPZ file. E.g., 'cx241203_id01250'
             study (str): The name of the study/dataset. E.g., 'cx'
 
         """
-        self.key = npz_file.split("/")[-1].split("_pvi_")[0]
+        self.key = npz_filepath.split("/")[-1].split("_pvi_")[0]
         self.study = self.extract_letters(self.key)
-        #print('self.study = ',self.study)
-        #print('self.key = ',self.key)
 
     def get_hydro_field_names(self) -> list[str]:
         return self.hydro_field_names
@@ -238,19 +228,13 @@ class labeledData:
 def process_channel_data(channel_map, img_list_combined, active_hydro_field_names): 
     unique_channels = np.unique(channel_map)
     if len(unique_channels) < len(channel_map):
-        #for i,img_list in enumerate(img_list_combined):
         for i in np.arange(img_list_combined.shape[0]):
             channel_map, img_list_combined[i] = combine_arrays_by_number(channel_map, img_list_combined[i])
-            #channel_map, end_img_list = combine_arrays_by_number(channel_map, end_img_list)       
-            print("process_channel_data channel_map shape=", channel_map.shape)
         if channel_map != unique_channels:
             print('\n ERROR: combination of repeated materials fail')
         active_hydro_field_names = (np.unique(active_hydro_field_names)).tolist()
-    print("process_channel_data img_list=", img_list)
-    print("process_channel_data img_list=", img_list.shape)
     return img_list_combined, channel_map, active_hydro_field_names
 
-#===============================================================================
 
 class temporal_DataSet(Dataset):
     """Temporal field-to-field mapping dataset.
@@ -260,7 +244,7 @@ class temporal_DataSet(Dataset):
     def __init__(
         self,
         NPZ_DIR: str,
-        CSV_DIR: str, # <--- bkaiser
+        CSV_FILEPATH: str,
         file_prefix_list: str,
         max_timeIDX_offset: int,
         max_file_checks: int,
@@ -278,8 +262,8 @@ class temporal_DataSet(Dataset):
         being less than or equal to 3 in the lsc240420 data.
 
         Args:
-            NPZ_DIR (str): Location of LSC NPZ files.
-            CSV_DIR (str): Path to the 'design' file (CSV).
+            NPZ_DIR (str): Directory storing NPZ files of the dataset being analyzed.
+            CSV_FILEPATH (str): Path to the 'design' file (CSV).
             file_prefix_list (str): Text file listing unique prefixes corresponding
                                     to unique simulations.
             max_timeIDX_offset (int): Maximum timesteps-ahead to attempt
@@ -291,11 +275,10 @@ class temporal_DataSet(Dataset):
                                    are generated before throwing an error.
             half_image (bool): If True then returned images are NOT reflected about axis
                                of symmetry and half-images are returned instead.
-            hydro_fields (np.array, optional): Array of hydro field names to be included.
 
         """
-        self.CSV_DIR = CSV_DIR 
         self.NPZ_DIR = NPZ_DIR
+        self.CSV_FILEPATH = CSV_FILEPATH
         self.max_timeIDX_offset = max_timeIDX_offset
         self.max_file_checks = max_file_checks
         self.half_image = half_image
@@ -307,11 +290,6 @@ class temporal_DataSet(Dataset):
         # Shuffle the list of prefixes in-place
         random.shuffle(self.file_prefix_list)
         self.Nsamples = len(self.file_prefix_list)
-
-        ## These will change from simulation key to key:
-        #self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
-        #self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
-        #self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map() 
 
         # Initialize random number generator for time index selection
         self.rng = np.random.default_rng()
@@ -382,9 +360,9 @@ class temporal_DataSet(Dataset):
             start_npz = np.load(self.NPZ_DIR + start_file)
 
             # These will change from simulation key to key:
-            self.active_hydro_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_active_hydro_field_names() 
-            self.active_npz_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_active_npz_field_names() 
-            self.channel_map = labeledData(self.NPZ_DIR + start_file,self.CSV_DIR).get_channel_map() 
+            self.active_npz_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_FILEPATH).get_active_npz_field_names() 
+            active_hydro_field_names = labeledData(self.NPZ_DIR + start_file,self.CSV_FILEPATH).get_active_hydro_field_names()
+            channel_map = labeledData(self.NPZ_DIR + start_file,self.CSV_FILEPATH).get_channel_map() 
 
         except Exception as e:
             print(
@@ -413,29 +391,25 @@ class temporal_DataSet(Dataset):
 
         for hfield in self.active_npz_field_names: 
             tmp_img = read_npz_NaN(start_npz, hfield) 
-            print("tmp_img start shape=", tmp_img.shape)  # SOUMI
             if not self.half_image:
                 tmp_img = np.concatenate((np.fliplr(tmp_img), tmp_img), axis=1)
             start_img_list.append(tmp_img)
 
             tmp_img = read_npz_NaN(end_npz, hfield)
-            print("tmp_img end shape=", tmp_img.shape)  # SOUMI
             if not self.half_image:
                 tmp_img = np.concatenate((np.fliplr(tmp_img), tmp_img), axis=1)
             end_img_list.append(tmp_img)
 
         img_list_combined = np.array([start_img_list, end_img_list])
-        img_list_combined, channel_map, active_hydro_field_names = process_channel_data(self.channel_map, img_list_combined, self.active_hydro_field_names)
+        img_list_combined, channel_map, active_hydro_field_names = process_channel_data(channel_map, img_list_combined, self.active_hydro_field_names)
         start_img_list = img_list_combined[0]
         end_img_list = img_list_combined[1]
-        self.channel_map = channel_map
+        self.channel_map = channel_map  #<-- SOUMI: If channel_map and active_hydro_field_names are updated inside the loop above through process_channel_data, I feel they should be defined as instance attributes once we have a final value outside the loop, Bryan please check
         self.active_hydro_field_names = active_hydro_field_names
  
         # Concatenate images channel first.
         start_img = torch.tensor(np.stack(start_img_list, axis=0)).to(torch.float32)
         end_img = torch.tensor(np.stack(end_img_list, axis=0)).to(torch.float32)
-        print("start_img shape=", start_img.shape)
-        print("end_emg shape=", end_img.shape)
 
         # Get the time offset
         Dt = torch.tensor(0.25 * (endIDX - startIDX), dtype=torch.float32)
@@ -444,7 +418,8 @@ class temporal_DataSet(Dataset):
         start_npz.close()
         end_npz.close()
 
-        return start_img, end_img, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS, FOR BOTH START_IMG AND END_IMG
+        return start_img, end_img, Dt, self.channel_map
+
 
 class sequential_DataSet(Dataset):
     """Returns a sequence of consecutive frames from a simulation.
@@ -452,7 +427,8 @@ class sequential_DataSet(Dataset):
     For example, if seq_len=4, you'll get frames t, t+1, t+2, t+3.
 
     Args:
-        NPZ_DIR (str): Location of NPZ files.
+        NPZ_DIR (str): Directory storing NPZ files of the dataset being analyzed.
+        CSV_FILEPATH (str): Path to the 'design' file (CSV).
         file_prefix_list (str): Text file listing unique prefixes corresponding
                                 to unique simulations.
         max_file_checks (int): Maximum number of attempts to find valid file sequences.
@@ -465,6 +441,7 @@ class sequential_DataSet(Dataset):
     def __init__(
         self,
         NPZ_DIR: str,
+        CSV_FILEPATH: str,
         file_prefix_list: str,
         max_file_checks: int,
         seq_len: int,
@@ -477,6 +454,7 @@ class sequential_DataSet(Dataset):
             raise FileNotFoundError(f"Directory not found: {NPZ_DIR}")
 
         self.NPZ_DIR = NPZ_DIR
+        self.CSV_FILEPATH = CSV_FILEPATH
         self.max_file_checks = max_file_checks
         self.seq_len = seq_len
         self.half_image = half_image
@@ -488,11 +466,6 @@ class sequential_DataSet(Dataset):
         # Shuffle the prefixes for randomness
         random.shuffle(self.file_prefix_list)
         self.Nsamples = len(self.file_prefix_list)
-
-        # Fields to extract from the simulation
-        #self.active_hydro_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_hydro_field_names() 
-        #self.active_npz_field_names = labeledData(self.NPZ_DIR,self.CSV_DIR).get_active_npz_field_names() 
-        #self.channel_map = labeledData(self.NPZ_DIR,self.CSV_DIR).get_channel_map()
 
         # Random number generator
         self.rng = np.random.default_rng()
@@ -548,15 +521,15 @@ class sequential_DataSet(Dataset):
                 data_npz = np.load(file_path)
 
                 # Fields to extract from the simulation
-                self.active_hydro_field_names = labeledData(file_path,self.CSV_DIR).get_active_hydro_field_names()
-                self.active_npz_field_names = labeledData(file_path,self.CSV_DIR).get_active_npz_field_names()
-                self.channel_map = labeledData(file_path,self.CSV_DIR).get_channel_map()
+                self.active_npz_field_names = labeledData(file_path,self.CSV_FILEPATH).get_active_npz_field_names()
+                active_hydro_field_names = labeledData(file_path,self.CSV_FILEPATH).get_active_hydro_field_names()
+                channel_map = labeledData(file_path,self.CSV_FILEPATH).get_channel_map()
 
             except Exception as e:
                 raise RuntimeError(f"Error loading file: {file_path}") from e
 
             field_imgs = []
-            for hfield in self.active_npz_field_names: # <--- changed from hydro_fields, bkaiser.
+            for hfield in self.active_npz_field_names:
                 tmp_img = read_npz_NaN(start_npz, hfield)             
 
                 # Reflect image if not half_image
@@ -568,10 +541,10 @@ class sequential_DataSet(Dataset):
             data_npz.close()
 
             img_list_combined = np.array([field_imgs])
-            img_list_combined, channel_map, active_hydro_field_names = process_channel_data(self.channel_map, img_list_combined, self.active_hydro_field_names)
+            img_list_combined, channel_map, active_hydro_field_names = process_channel_data(channel_map, img_list_combined, active_hydro_field_names)
             field_imgs = img_list_combined[0]
-            self.channel_map = channel_map
-            self.active_hydro_field_names = active_hydro_field_names
+            #self.channel_map = channel_map
+            #self.active_hydro_field_names = active_hydro_field_names
 
             # Stack the fields for this frame
             field_tensor = torch.tensor(
@@ -579,69 +552,15 @@ class sequential_DataSet(Dataset):
             )
             frames.append(field_tensor)
 
+        self.channel_map = channel_map  #<-- SOUMI: If channel_map and active_hydro_field_names are updated multiple times inside the loop above through process_channel_data, I feel they should be defined once we have a final value outside the loop, Bryan please check
+        self.active_hydro_field_names = active_hydro_field_names
+
         # Combine frames into a single tensor of shape [seq_len, num_fields, H, W]
         img_seq = torch.stack(frames, dim=0)
 
         # Fixed time offset
         Dt = torch.tensor(0.25, dtype=torch.float32)
 
-        return img_seq, Dt # <--- ADD ONE HOT ENCODING FOR CHANNEL MAPS 
 
-#==============================================================================        
+        return img_seq, Dt, self.channel_map  #<-- Bryan please check
 
-# tests to be removed:
-
-#csv_file = '/lustre/scratch5/exempt/artimis/mpmm/design_cx241203_MASTER.csv' 
-
-#print('\n Should be Al wall and Void background: ')
-#labeledData('/lustre/scratch5/exempt/artimis/mpmm/cx241203/cx241203_id00023/cx241203_id00023_pvi_idx00001.npz',csv_file)
-
-# if you want to test the others (below) they need to look like above:
-
-# print('\n Should be Be wall and Void background: ')
-# labeledData('./cx241203_id00054_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be U.DU wall and Polymer.Sylgard background: ')
-# labeledData('./cx241203_id00750_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be U.DU wall and Steel.alloySS304L background: ')
-# labeledData('./cx241203_id00792_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Ta wall and Sn background: ')
-# labeledData('./cx241203_id01250_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Steel.alloySS304L wall and U.DU background: ')
-# labeledData('./cx241203_id01388_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Steel.alloySS304L wall and Steel.alloySS304L background: ')
-# labeledData('./cx241203_id01455_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Steel.alloySS304L wall and Air background: ')
-# labeledData('./cx241203_id01531_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Steel.alloySS304L wall and Water background: ')
-# labeledData('./cx241203_id01551_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Sn wall and U.DU background: ')
-# labeledData('./cx241203_id01615_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-# print('\n Should be Air wall and N background: ')
-# labeledData('./cx241203_id02388_pvi_idx00001.npz','./design_cx241203_MASTER.csv')
-
-
-# # Example Usage:
-# number_list = [1, 2, 1, 3, 2]
-# array_list = [
-#     np.array([[1, 2], [3, 4]]),  # 1st occurrence of 1
-#     np.array([[5, 6], [7, 8]]),  # 1st occurrence of 2
-#     np.array([[10, 20], [30, 40]]),  # 2nd occurrence of 1 (should be added)
-#     np.array([[9, 10], [11, 12]]),  # 1st occurrence of 3
-#     np.array([[50, 60], [70, 80]])  # 2nd occurrence of 2 (should be added)
-# ]
-
-# unique_numbers, combined_arrays = combine_arrays_by_number(number_list, array_list)
-
-# # Print Output
-# print("Unique Numbers:", unique_numbers)
-# for i, arr in enumerate(combined_arrays):
-#     print(f"Array for {unique_numbers[i]}:\n{arr}\n")
