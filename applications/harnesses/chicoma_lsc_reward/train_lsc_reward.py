@@ -1,12 +1,10 @@
-#!/usr/bin/env python
-
-"""
-Training script for reward/value network using hybrid2vectorCNN.
+"""Training script for reward/value network using hybrid2vectorCNN.
 
 This script loads the LSC_hfield_reward_DataSet and trains a reward prediction network 
 using the hybrid2vectorCNN architecture.
 
 Includes learning rate scheduling and support for normalized inputs.
+
 """
 
 #############################################
