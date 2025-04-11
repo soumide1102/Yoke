@@ -42,13 +42,6 @@ parser = cli.add_cosine_lr_scheduler_args(parser=parser)
 # Change some default filepaths.
 parser.set_defaults(design_file="design_lsc240420_MASTER.csv")
 
-## Change some default filepaths.
-#parser.set_defaults(
-#    train_filelist="lsc240420_prefixes_train_80pct.txt",
-#    validation_filelist="lsc240420_prefixes_validation_10pct.txt",
-#    test_filelist="lsc240420_prefixes_test_10pct.txt",
-#)
-
 #############################################
 #############################################
 if __name__ == "__main__":
@@ -64,11 +57,6 @@ if __name__ == "__main__":
     validation_filelist = args.FILELIST_DIR + args.validation_filelist
     test_filelist = args.FILELIST_DIR + args.test_filelist
 
-    # Training Parameters
-    #initial_learningrate = args.init_learnrate
-    #LRepoch_per_step = args.LRepoch_per_step
-    #LRdecay = args.LRdecay
-    
     anchor_lr = args.anchor_lr
     num_cycles = args.num_cycles
     min_fraction = args.min_fraction
@@ -79,11 +67,9 @@ if __name__ == "__main__":
     # possibly, pre-loaded onto GPUs. If the number of workers is large they
     # will swamp memory and jobs will fail.
     num_workers = args.num_workers
-    # num_workers = int(os.environ["SLURM_JOB_CPUS_PER_NODE"])
 
     batch_size = args.batch_size
     # Leave one CPU out of the worker queue. Not sure if this is necessary.
-    #num_workers = int(os.environ["SLURM_JOB_CPUS_PER_NODE"])  # - 1
     train_per_val = args.TRAIN_PER_VAL
 
     # Epoch Parameters
@@ -109,15 +95,6 @@ if __name__ == "__main__":
     print("Number of System CPUs:", os.cpu_count())
     print("Number of CPUs per GPU:", os.environ["SLURM_JOB_CPUS_PER_NODE"])
 
-
-    #############################################
-    # Data
-    #############################################
-    #train_dataset = LSC_hfield_reward_DataSet(args.data_dir, train=True, normalize=True)
-    #val_dataset = LSC_hfield_reward_DataSet(args.data_dir, train=False, normalize=True)
-
-    #train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    #val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     #############################################
     # Model
@@ -150,7 +127,6 @@ if __name__ == "__main__":
         weight_decay=0.01
     )
     print("Model initialized.")
-    #scheduler = cli.create_scheduler(optimizer, args)
 
     #############################################
     # Load Model for Continuation
@@ -160,29 +136,6 @@ if __name__ == "__main__":
         print("Model state loaded for continuation.")
     else:
         starting_epoch = 0
-
-    #############################################
-    # Script and compile model on device
-    #############################################
-    #if args.multigpu:
-    #    compiled_model = model  # jit compilation disabled in multi-gpu scenarios.
-    #else:
-    #    scripted_model = torch.jit.script(model)
-
-    #    # Model compilation has some interesting parameters to play with.
-    #    #
-    #    # NOTE: Compiled model is not able to be loaded from checkpoint for some
-    #    # reason.
-    #    compiled_model = torch.compile(
-    #        scripted_model,
-    #        fullgraph=True,  # If TRUE, throw error if
-    #        # whole graph is not
-    #        # compileable.
-    #        mode="reduce-overhead",
-    #    )  # Other compile
-    #    # modes that may
-    #    # provide better
-    #    # performance
 
     #############################################
     # Move model and optimizer state to GPU
@@ -197,31 +150,6 @@ if __name__ == "__main__":
             if isinstance(v, torch.Tensor):
                 state[k] = v.to(device)
 
-    #############################################
-    # Load Model for Continuation (Rank 0 only)
-    #############################################
-    # Wait to move model to GPU until after the checkpoint load. Then
-    # explicitly move model and optimizer state to GPU.
-    #if CONTINUATION:
-    #    model, starting_epoch = tr.load_model_and_optimizer(
-    #        checkpoint,
-    #        optimizer,
-    #        available_models,
-    #        device=device,
-    #    )
-    #    print("Model state loaded for continuation.")
-    #else:
-    #    model.to(device)
-    #    starting_epoch = 0
-    
-    #############################################
-    # Load Model for Continuation
-    #############################################
-    #if CONTINUATION:
-    #    starting_epoch = tr.load_model_and_optimizer_hdf5(model, optimizer, checkpoint)
-    #    print("Model state loaded for continuation.")
-    #else:
-    #    starting_epoch = 0
 
     #############################################
     # LR scheduler
@@ -233,15 +161,6 @@ if __name__ == "__main__":
     else:
         last_epoch = train_batches * (starting_epoch - 1)
 
-    # Scale the anchor LR by global batchsize
-    #
-    # # For multi-node
-    #lr_scale = np.sqrt(float(Ngpus) * float(Knodes) * float(batch_size))
-    #original_batchsize = 40.0  # 1 node, 4 gpus, 10 samples/gpu
-    #ddp_anchor_lr = anchor_lr * lr_scale / original_batchsize
-    #
-    # For single node
-    # ddp_anchor_lr = anchor_lr
 
     LRsched = CosineWithWarmupScheduler(
         optimizer,
@@ -253,28 +172,6 @@ if __name__ == "__main__":
         last_epoch=last_epoch,
     )
 
-    #############################################
-    # Script and compile model on device
-    #############################################
-    if args.multigpu:
-        compiled_model = model  # jit compilation disabled in multi-gpu scenarios.
-    else:
-        scripted_model = torch.jit.script(model)
-
-        # Model compilation has some interesting parameters to play with.
-        #
-        # NOTE: Compiled model is not able to be loaded from checkpoint for some
-        # reason.
-        compiled_model = torch.compile(
-            scripted_model,
-            fullgraph=True,  # If TRUE, throw error if
-            # whole graph is not
-            # compileable.
-            mode="reduce-overhead",
-        )  # Other compile
-        # modes that may
-        # provide better
-        # performance
 
     #############################################
     # Initialize Data
