@@ -44,7 +44,7 @@ export date00=`date`
 # nvpid=$!
 
 # Start the Code
-srun python <train_script> @study<studyIDX>_START.input &>training.out&
+python <train_script> @study<studyIDX>_START.input
 #pypid=$!
 
 # Kill GPU monitoring after python process finishes

@@ -1,7 +1,7 @@
 --studyIDX
 <studyIDX>
 --FILELIST_DIR
-/usr/projects/artimis/mpmm/hickmank/github_yoke/applications/filelists/
+/users/soumide/repos/Yoke/applications/filelists/
 --LSC_DESIGN_DIR
 /lustre/scratch5/exempt/artimis/mpmm/
 --LSC_NPZ_DIR
