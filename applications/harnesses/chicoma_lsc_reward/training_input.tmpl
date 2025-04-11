@@ -14,16 +14,6 @@ lsc240420_train_80pct.txt
 lsc240420_val_10pct.txt
 --test_filelist
 lsc240420_test_10pct.txt
---anchor_lr
-<ANCHOR_LR>
---num_cycles
-<NUM_CYCLES>
---min_fraction
-<MIN_FRACTION>
---terminal_steps
-<TERMINAL_STEPS>
---warmup_steps
-<WARMUP_STEPS>
 --trn_rcrd_filename
 ./training_study<studyIDX>_epoch<epochIDX>.csv
 --val_rcrd_filename
@@ -33,7 +23,7 @@ lsc240420_test_10pct.txt
 --num_workers
 <NUM_WORKERS>
 --total_epochs
-100
+4
 --cycle_epochs
 2
 --train_batches
@@ -41,7 +31,7 @@ lsc240420_test_10pct.txt
 --val_batches
 <NVAL_BATCH>
 --TRAIN_PER_VAL
-5
+2
 --multigpu
 --continuation
 --checkpoint
