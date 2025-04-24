@@ -10,14 +10,17 @@ import subprocess
 from pathlib import Path
 import argparse
 
-# Ex Usage: python3 lsc_loderunner_create_gif.py
+# Ex Usage 1: python3 lsc_loderunner_create_gif.py
 #                   --runs-dir <path to runs dir that has study dirs>
 #                   --npz-dir <path to the dir that has npz files>
 #                   --skip-list 011,017,018
 #                   --run-id <run id num>
 #                   --embed-dim <embed dim value>
+# OR
+# Ex Usage 2: python3 lsc_loderunner_create_gif.py @lsc_loderunner_create_gif.input
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(fromfile_prefix_chars="@")
+
 
 parser.add_argument(
     "--runs-dir",
@@ -86,7 +89,7 @@ for study_path in sorted(runs_dir.glob("study_*")):
         print(f"\thdf5_file_max_epoch:\n\t{hdf5_file_max_epoch}")
 
     # Run the animation generation script
-    outdir = Path(f"{runs_dir}/{study_dir}_gif")
+    outdir = Path(f"{runs_dir}/GIF/{study_dir}")
     outdir.mkdir(parents=True, exist_ok=True)
 
     # Create PNG files from the true image, predicted image and discrepancy
