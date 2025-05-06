@@ -17,34 +17,39 @@
 #flux: --error=ksh_test.err
 
 
-# # Set the master node's address and port
-# MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-# MASTER_PORT=$(shuf -i 1024-65535 -n 1)  # Choose a random port
-# export MASTER_ADDR MASTER_PORT
+# ——————————————————————————————————————————————————————————————
+# 1) Set up MASTER_ADDR / MASTER_PORT for torch.distributed (env://)
+# ——————————————————————————————————————————————————————————————
+# Grab the list of hosts from Flux, take the first as master
+HOSTLIST=$(flux hostlist instance)             # full comma-sep list of nodes
+MASTER_ADDR=${HOSTLIST%%,*}                    # text before first comma
+MASTER_PORT=$(shuf -i 10000-65535 -n 1)        # random open port
 
-# # Check available GPUs
-# sinfo  -o "%P %.24G %N"
-# srun /usr/bin/echo $CUDA_AVAILABLE_DEVICES
-# nvidia-smi
+export MASTER_ADDR MASTER_PORT
+echo "MASTER_ADDR=$MASTER_ADDR  MASTER_PORT=$MASTER_PORT"
 
-# # Specify NCCL communication
-# export NCCL_SOCKET_IFNAME=hsn0  # Check possible interfaces with `ip link show`
+# ——————————————————————————————————————————————————————————————
+# 2) Show GPU topology
+# ——————————————————————————————————————————————————————————————
+# What GPUs do we have?
+flux resource list -t gpu -o partid,nnodes,ncores,ngpus
+# AMD’s equivalent of nvidia-smi
+/opt/rocm/bin/rocm-smi
 
-# Debugging distributed data parallel
-# export NCCL_DEBUG=INFO
-# export NCCL_DEBUG_SUBSYS=INIT
+# ——————————————————————————————————————————————————————————————
+# 3) NCCL (ROCm-NCCL) / OpenMP tuning
+# ——————————————————————————————————————————————————————————————
+# Check possible interfaces (IFNAME) with `ip link show`? 
+export NCCL_SOCKET_IFNAME=hsn0
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=INIT
+export OMP_NUM_THREADS=10
 
 # Load correct conda environment
 export ROCMVERSION=6.2.4
 module load rocm/$ROCMVERSION
 module load cray-python/3.11.7
 source /g/g12/hickmann/yoke_250415/bin/activate
-
-# # Set number of threads per GPU
-# export OMP_NUM_THREADS=10
-
-# # MKL problems
-# export MKL_SERVICE_FORCE_INTEL=1
 
 # Get start time
 export date00=`date`
@@ -54,7 +59,7 @@ export date00=`date`
 flux run python -c "import torch; x = torch.rand(3, 3); print(x)"
 flux run python -c "import torch; print(torch.cuda.is_available())"
 
-#srun python -u <train_script> @study<studyIDX>_START.input
+#flux run python -u <train_script> @study<studyIDX>_START.input
 
 # Get end time and print to stdout
 export date01=`date`
