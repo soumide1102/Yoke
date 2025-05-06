@@ -10,12 +10,11 @@
 #flux: --time=20m
 #flux: --queue=pdebug
 #flux: --nodes=1
-#flux: --ntasks-per-node=4
-#flux: --gpus-per-task=1
-#flux: --cores-per-task=24
+#flux: -n 4  # total number of tasks across all nodes.
+#flux: -g 1  # --gpus-per-task=1
+#flux: -c 24  # --cores-per-task=24
 #flux: --output=ksh_test.out
 #flux: --error=ksh_test.err
-#flux: --verbose
 
 
 # # Set the master node's address and port
@@ -39,7 +38,7 @@
 export ROCMVERSION=6.2.4
 module load rocm/$ROCMVERSION
 module load cray-python/3.11.7
-source yoke_250415/bin/activate
+source /g/g12/hickmann/yoke_250415/bin/activate
 
 # # Set number of threads per GPU
 # export OMP_NUM_THREADS=10
@@ -52,8 +51,8 @@ export date00=`date`
 
 # Start the Code
 # Explicitly set TCP environment for the following...
-flux run python -m "import torch; x = torch.rand(3, 3); print(x)"
-flux run python -m "import torch; print(torch.cuda.is_available())"
+flux run python -c "import torch; x = torch.rand(3, 3); print(x)"
+flux run python -c "import torch; print(torch.cuda.is_available())"
 
 #srun python -u <train_script> @study<studyIDX>_START.input
 
