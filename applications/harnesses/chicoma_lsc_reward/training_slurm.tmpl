@@ -11,10 +11,11 @@
 # partition. There are optional other constraints. Namely, `gpu80` and
 # `gpu40only`. 
 
-#SBATCH --job-name=reward_chfe_study<studyIDX>
+#SBATCH --job-name=lscreward_s<studyIDX>_e<epochIDX>
 #SBATCH --account=xd_g
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=64
+#SBATCH --nodes=<KNODES>
+#SBATCH --ntasks-per-node=<NGPUS>
+#SBATCH --gpus-per-node=<NGPUS>
 #SBATCH --cpus-per-task=16
 #SBATCH --partition=gpu_debug 
 #SBATCH --reservation=gpu_debug
@@ -60,7 +61,7 @@ export date00=`date`
 # nvpid=$!
 
 # Start the Code
-srun python <train_script> @study<studyIDX>_START.input
+srun python -u <train_script> @<INPUTFILE>
 #pypid=$!
 
 # Kill GPU monitoring after python process finishes

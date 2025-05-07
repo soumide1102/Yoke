@@ -1,2 +1,2 @@
-studyIDX,YOKE_TORCH_ENV,NUM_WORKERS,BATCH_SIZE,NTRN_BATCH,NVAL_BATCH,train_script
-1,torch_ch_gpu_241112,2,4,4,4,train_lsc_reward.py
+studyIDX,YOKE_TORCH_ENV,KNODES,NGPUS,NUM_WORKERS,BATCH_SIZE,NTRN_BATCH,NVAL_BATCH,train_script
+1,torch_ch_gpu_241112,1,4,2,8,4,4,train_lsc_reward.py
