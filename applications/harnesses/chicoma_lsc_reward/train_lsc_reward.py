@@ -16,6 +16,7 @@ import argparse
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yoke.models.hybridCNNmodules import hybrid2vectorCNN
