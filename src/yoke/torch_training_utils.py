@@ -1836,7 +1836,9 @@ def train_DDP_loderunner_epoch(
     rank: int,
     world_size: int,
 ):
-    """Function to complete a training epoch on the LodeRunner architecture with
+    """Distributed data-parallel LodeRunner Epoch.
+
+    Function to complete a training epoch on the LodeRunner architecture with
     fixed channels in the input and output. Training and validation information
     is saved to successive CSV files.
 
@@ -2137,6 +2139,7 @@ def train_lsc_policy_epoch(
     model,
     optimizer,
     loss_fn,
+    LRsched,
     epochIDX,
     train_per_val,
     train_rcrd_filename: str,
@@ -2145,7 +2148,9 @@ def train_lsc_policy_epoch(
     rank: int,
     world_size: int,
 ):
-    """Function to complete a training epoch on the Gaussian-policy network for the
+    """Epoch training of Gaussian-policy.
+
+    Function to complete a training epoch on the Gaussian-policy network for the
     layered shaped charge design problem. Training and validation information
     is saved to successive CSV files.
 
@@ -2157,6 +2162,8 @@ def train_lsc_policy_epoch(
         model (loaded pytorch model): model to train
         optimizer (torch.optim): optimizer for training set
         loss_fn (torch.nn Loss Function): loss function for training set
+        LRsched (torch.optim.lr_scheduler): Learning-rate scheduler that will be called
+                                            every training step.
         epochIDX (int): Index of current training epoch
         train_per_val (int): Number of Training epochs between each validation
         train_rcrd_filename (str): Name of CSV file to save training sample stats to
@@ -2183,6 +2190,9 @@ def train_lsc_policy_epoch(
             x_true, pred_mean, train_losses = train_lsc_policy_datastep(
                 traindata, model, optimizer, loss_fn, device, rank, world_size
             )
+
+            # Increment the learning-rate scheduler
+            LRsched.step()
 
             # Save training record (rank 0 only)
             if rank == 0:
