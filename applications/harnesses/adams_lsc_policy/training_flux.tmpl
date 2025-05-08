@@ -6,15 +6,15 @@
 
 # RZadams has 96 CPUs/node and 4 GPUs/node
 
-#flux: --job-name=lscpolicy_s<studyIDX>_e0001
+#flux: --job-name=lscpolicy_s<studyIDX>_e<epochIDX>
 #flux: --time=20m
 #flux: --queue=pdebug
 #flux: --nodes=1
 #flux: -n 4  # total number of tasks across all nodes.
 #flux: -g 1  # --gpus-per-task=1
 #flux: -c 24  # --cores-per-task=24
-#flux: --output=lscpolicy_s<studyIDX>_e0001.out
-#flux: --error=lscpolicy_s<studyIDX>_e0001.err
+#flux: --output=study<studyIDX>_e<epochIDX>.out
+#flux: --error=study<studyIDX>_e<epochIDX>.err
 
 
 # ——————————————————————————————————————————————————————————————
@@ -59,7 +59,7 @@ export date00=`date`
 # flux run python -c "import torch; x = torch.rand(3, 3); print(x)"
 # flux run python -c "import torch; print(torch.cuda.is_available())"
 
-flux run python -u <train_script> @study<studyIDX>_START.input
+flux run python -u <train_script> @<INPUTFILE>
 
 # Get end time and print to stdout
 export date01=`date`

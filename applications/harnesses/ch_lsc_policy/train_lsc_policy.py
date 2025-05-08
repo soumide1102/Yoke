@@ -29,6 +29,7 @@ parser = cli.add_filepath_args(parser=parser)
 parser = cli.add_training_args(parser=parser)
 parser = cli.add_cosine_lr_scheduler_args(parser=parser)
 
+
 def setup_distributed() -> tuple[int, int, int, torch.device]:
     """Sets up distributed training using PyTorch DDP."""
     # ----- 1) Basic setup & environment variables -----

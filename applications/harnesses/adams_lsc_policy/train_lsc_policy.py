@@ -11,6 +11,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from yoke.models.policyCNNmodules import gaussian_policyCNN
 from yoke.datasets.lsc_dataset import LSC_hfield_policy_DataSet
 import yoke.torch_training_utils as tr
+from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli
 
 
@@ -26,6 +27,7 @@ parser = argparse.ArgumentParser(
 parser = cli.add_default_args(parser=parser)
 parser = cli.add_filepath_args(parser=parser)
 parser = cli.add_training_args(parser=parser)
+parser = cli.add_cosine_lr_scheduler_args(parser=parser)
 
 
 def setup_distributed() -> tuple[int, int, int, torch.device]:
@@ -91,6 +93,13 @@ def main(
     # possibly, pre-loaded onto GPUs. If the number of workers is large they
     # will swamp memory and jobs will fail.
     num_workers = args.num_workers
+
+    # LR-schedule Parameters
+    anchor_lr = args.anchor_lr
+    num_cycles = args.num_cycles
+    min_fraction = args.min_fraction
+    terminal_steps = args.terminal_steps
+    warmup_steps = args.warmup_steps
 
     # Epoch Parameters
     batch_size = args.batch_size
@@ -180,6 +189,34 @@ def main(
     model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
     #############################################
+    # Learning Rate Scheduler
+    #############################################
+    if starting_epoch == 0:
+        last_epoch = -1
+    else:
+        last_epoch = train_batches * (starting_epoch - 1)
+
+    # Scale the anchor LR by global batchsize
+    #
+    # # For multi-node
+    #lr_scale = np.sqrt(float(Ngpus) * float(Knodes) * float(batch_size))
+    #original_batchsize = 40.0  # 1 node, 4 gpus, 10 samples/gpu
+    #ddp_anchor_lr = anchor_lr * lr_scale / original_batchsize
+    #
+    # For single node
+    ddp_anchor_lr = anchor_lr
+
+    LRsched = CosineWithWarmupScheduler(
+        optimizer,
+        anchor_lr=ddp_anchor_lr,
+        terminal_steps=terminal_steps,
+        warmup_steps=warmup_steps,
+        num_cycles=num_cycles,
+        min_fraction=min_fraction,
+        last_epoch=last_epoch,
+    )
+
+    #############################################
     # Data Initialization (Distributed Dataloader)
     #############################################
     train_dataset = LSC_hfield_policy_DataSet(
@@ -214,7 +251,7 @@ def main(
         rank=rank,
         world_size=world_size,
     )
-    
+
     #############################################
     # Training Loop (Modified for DDP)
     #############################################
@@ -245,6 +282,7 @@ def main(
             model=model,
             optimizer=optimizer,
             loss_fn=loss_fn,
+            LRsched=LRsched,
             epochIDX=epochIDX,
             train_per_val=train_per_val,
             train_rcrd_filename=trn_rcrd_filename,
