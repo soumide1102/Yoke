@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-from models.mnist_model import Net
+from yoke.models.mnist_model import Net
 
 # To run: (myenv) C:\Users\364235\yoke>python -m harnesses.mnist_surrogate.mnist_harness
 
