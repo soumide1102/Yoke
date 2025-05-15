@@ -1,3 +1,5 @@
+"""Script to start an MNIST study (no slurm)."""
+
 # Running studies:
 # \Yoke> set PYTHONPATH=src
 # \Yoke> python -m applications.harnesses.mnist_surrogate.START_study
@@ -7,42 +9,39 @@ import argparse
 import numpy as np
 import pandas as pd
 
-def replace_keys(study_dict, data):
-    """Function to replace "key" values in a string with dictionary values
 
-     Args:
-         study_dict (dict): dictonary of keys and values to replace
-         data (str): data to replace keys in
-
-     Returns:
-         data (str): data with keys replaced
-
-    """
-
+def replace_keys(study_dict, data: str) -> str:
+    """Replaces "key" values in a string with dictionary values."""
     for key, value in study_dict.items():
-        if key == 'studyIDX':
-            data = data.replace(f'<{key}>', '{:03d}'.format(value))
-        elif type(value) == np.float64 or type(value) == float:
-            data = data.replace(f'<{key}>', '{:5.4f}'.format(value))
-        elif type(value) == np.int64 or type(value) == int:
-            data = data.replace(f'<{key}>', '{:d}'.format(value))
-        elif type(value) == str:
-            data = data.replace(f'<{key}>', '{}'.format(value))
-        elif type(value) == np.bool_ or type(value) == bool:
-            data = data.replace(f'<{key}>', '{}'.format(str(value)))
+        if key == "studyIDX":
+            data = data.replace(f"<{key}>", f"{value:03d}")
+        elif type(value) is np.float64 or type(value) is float:
+            data = data.replace(f"<{key}>", f"{value:5.4f}")
+        elif type(value) is np.int64 or type(value) is int:
+            data = data.replace(f"<{key}>", f"{value:d}")
+        elif type(value) is str:
+            data = data.replace(f"<{key}>", f"{value}")
+        elif type(value) is np.bool_ or type(value) is bool:
+            data = data.replace(f"<{key}>", f"{str(value)}")
         else:
-            print('Key is', key, 'with value of', value, 'with type', type(value))
-            raise ValueError('Unrecognized datatype in hyperparameter list.')
+            print("Key is", key, "with value of", value, "with type", type(value))
+            raise ValueError("Unrecognized datatype in hyperparameter list.")
     return data
 
+
 # Parse hyperparameters.csv
-hyperparameters_csv = os.path.join(os.path.dirname(__file__), 'hyperparameters.csv')
-parser = argparse.ArgumentParser(description='Starts execution of training studies')
-parser.add_argument('--csv', type=str, default=hyperparameters_csv, help='CSV file containing study hyperparameters')
+hyperparameters_csv = os.path.join(os.path.dirname(__file__), "hyperparameters.csv")
+parser = argparse.ArgumentParser(description="Starts execution of training studies")
+parser.add_argument(
+    "--csv",
+    type=str,
+    default=hyperparameters_csv,
+    help="CSV file containing study hyperparameters",
+)
 args = parser.parse_args()
 
 # Define path to the training input template
-training_input_tmpl = os.path.join(os.path.dirname(__file__), 'training_input.tmpl')
+training_input_tmpl = os.path.join(os.path.dirname(__file__), "training_input.tmpl")
 
 
 # Ensure training input template exists
@@ -52,7 +51,9 @@ if not os.path.exists(training_input_tmpl):
 
 # Read csv file into a dataframe
 try:
-    studyDF = pd.read_csv(args.csv, sep=',', header=0, index_col=0, comment='#', engine='python')
+    studyDF = pd.read_csv(
+        args.csv, sep=",", header=0, index_col=0, comment="#", engine="python"
+    )
 except Exception as e:
     print(f"Error reading CSV file: {e}")
     exit()
@@ -67,7 +68,7 @@ studylist = []
 # Iterate over each index value to create study dictionaries
 for i in idxlist:
     studydict = {}
-    studydict['studyIDX'] = int(i)
+    studydict["studyIDX"] = int(i)
     for var in varnames:
         studydict[var] = studyDF.loc[i, var]
     studylist.append(studydict)
@@ -76,19 +77,20 @@ print(f"\nTotal studies to run: {len(studylist)}")
 
 # Iterate over each study in the list
 for k, study in enumerate(studylist):
-
     # Create a name for the study ("studyXXX")
-    studyname = 'study_{:03d}'.format(study['studyIDX'])
+    studyname = "study_{:03d}".format(study["studyIDX"])
 
     # Define filepath for study directory
-    studydirname = os.path.join(os.path.dirname(__file__), 'study_{:03d}'.format(study['studyIDX']))
+    studydirname = os.path.join(
+        os.path.dirname(__file__), "study_{:03d}".format(study["studyIDX"])
+    )
 
     # Create directory for the study if it doesn't exist
     if not os.path.exists(studydirname):
         os.makedirs(studydirname)
 
     # Read the template data
-    with open(training_input_tmpl, 'r') as f:
+    with open(training_input_tmpl) as f:
         training_input_data = f.read()
 
     # Replace placeholders in the data
@@ -98,10 +100,10 @@ for k, study in enumerate(studylist):
     print(training_input_data)
 
     # Define path to the output file (training_input.txt)
-    training_input_filepath = os.path.join(studydirname, 'training_input.txt')
+    training_input_filepath = os.path.join(studydirname, "training_input.txt")
 
     # Write the modified data to the output file
-    with open(training_input_filepath, 'w') as f:
+    with open(training_input_filepath, "w") as f:
         f.write(training_input_data)
         # for key, value in study.items():
         #     f.write(f"{key}={value}\n")
@@ -109,7 +111,7 @@ for k, study in enumerate(studylist):
     print(f"\nRunning {studyname} with script {study['train_script']}\n")
 
     # Run the study script with the configuration file
-    os.system(f'python {study["train_script"]} --config-file {training_input_filepath}')
+    os.system(f"python {study['train_script']} --config-file {training_input_filepath}")
 
     print(f"Completed {studyname}")
 
