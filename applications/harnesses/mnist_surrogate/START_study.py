@@ -1,3 +1,7 @@
+# Running studies:
+# (myenv) C:\Users\364235\new_yoke\Yoke>set PYTHONPATH=src
+# (myenv) C:\Users\364235\new_yoke\Yoke>python -m applications.harnesses.mnist_surrogate.START_study
+
 import os
 import argparse
 import numpy as np
@@ -38,8 +42,6 @@ parser.add_argument('--csv', type=str, default=hyperparameters_csv, help='CSV fi
 args = parser.parse_args()
 
 # Define path to the training input template
-
-# training_input_tmpl = './training_input.tmpl'
 training_input_tmpl = os.path.join(os.path.dirname(__file__), 'training_input.tmpl')
 
 
