@@ -1,6 +1,6 @@
 # Running studies:
-# (myenv) C:\Users\364235\new_yoke\Yoke>set PYTHONPATH=src
-# (myenv) C:\Users\364235\new_yoke\Yoke>python -m applications.harnesses.mnist_surrogate.START_study
+# \Yoke> set PYTHONPATH=src
+# \Yoke> python -m applications.harnesses.mnist_surrogate.START_study
 
 import os
 import argparse
