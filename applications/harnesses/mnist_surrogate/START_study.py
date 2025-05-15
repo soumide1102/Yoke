@@ -32,12 +32,16 @@ def replace_keys(study_dict, data):
     return data
 
 # Parse hyperparameters.csv
+hyperparameters_csv = os.path.join(os.path.dirname(__file__), 'hyperparameters.csv')
 parser = argparse.ArgumentParser(description='Starts execution of training studies')
-parser.add_argument('--csv', type=str, default='./hyperparameters.csv', help='CSV file containing study hyperparameters')
+parser.add_argument('--csv', type=str, default=hyperparameters_csv, help='CSV file containing study hyperparameters')
 args = parser.parse_args()
 
 # Define path to the training input template
-training_input_tmpl = './training_input.tmpl'
+
+# training_input_tmpl = './training_input.tmpl'
+training_input_tmpl = os.path.join(os.path.dirname(__file__), 'training_input.tmpl')
+
 
 # Ensure training input template exists
 if not os.path.exists(training_input_tmpl):
@@ -72,7 +76,10 @@ print(f"\nTotal studies to run: {len(studylist)}")
 for k, study in enumerate(studylist):
 
     # Create a name for the study ("studyXXX")
-    studydirname = 'study_{:03d}'.format(study['studyIDX'])
+    studyname = 'study_{:03d}'.format(study['studyIDX'])
+
+    # Define filepath for study directory
+    studydirname = os.path.join(os.path.dirname(__file__), 'study_{:03d}'.format(study['studyIDX']))
 
     # Create directory for the study if it doesn't exist
     if not os.path.exists(studydirname):
@@ -97,11 +104,11 @@ for k, study in enumerate(studylist):
         # for key, value in study.items():
         #     f.write(f"{key}={value}\n")
 
-    print(f"\nRunning {studydirname} with script {study['train_script']}\n")
+    print(f"\nRunning {studyname} with script {study['train_script']}\n")
 
     # Run the study script with the configuration file
     os.system(f'python {study["train_script"]} --config-file {training_input_filepath}')
 
-    print(f"Completed {studydirname}")
+    print(f"Completed {studyname}")
 
 print("\nAll studies completed.")
