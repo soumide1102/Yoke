@@ -7,11 +7,17 @@ import torch.nn.functional as F
 
 class Net(nn.Module):
     """Convolutional neural network for classifying MNIST digits."""
+
     # Net class inherits from nn.Module, which is the base class for all
     # neural network modules in PyTorch. Inheriting from nn.Module allows you to
     # define your own custom neural network layers and operations.
-    def __init__(self, conv1_size: int = 32, conv2_size: int = 64,
-                 conv3_size: int = 128, conv4_size: int = 128) -> None:
+    def __init__(
+        self,
+        conv1_size: int = 32,
+        conv2_size: int = 64,
+        conv3_size: int = 128,
+        conv4_size: int = 128,
+    ) -> None:
         """__init__ initializes the layers."""
         super().__init__()
 
