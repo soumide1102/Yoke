@@ -18,7 +18,8 @@
 #SBATCH --output=study<studyIDX>_epoch<epochIDX>.out
 #SBATCH --error=study<studyIDX>_epoch<epochIDX>.err
 
-# (re-load modules or conda env here, if needed)
+# Load the right environment
+source $YOKE_CONDA/bin/activate $YOKE_TORCH
 
-# run for every cycle
-python <train_script> @<INPUTFILE>
+# First-run invocation
+python <train_script> @study<studyIDX>_START.input
