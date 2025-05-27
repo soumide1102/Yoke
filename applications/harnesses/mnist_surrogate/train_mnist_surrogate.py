@@ -7,7 +7,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
-from yoke.models.mnist_model import Net
+from yoke.models.mnist_model import mnist_CNN
 from yoke.helpers import cli
 
 if __name__ == "__main__":
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     test_loader = torch.utils.data.DataLoader(test_ds, **test_kwargs)
 
     # Model, optimizer, scheduler
-    model = Net(
+    model = mnist_CNN(
         conv1_size=args.conv1,
         conv2_size=args.conv2,
         conv3_size=args.conv3,

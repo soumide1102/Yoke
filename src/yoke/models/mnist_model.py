@@ -5,8 +5,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Net(nn.Module):
-    """Convolutional neural network for classifying MNIST digits."""
+class mnist_CNN(nn.Module):
+    """CNN for classifying MNIST digits.
+
+    Maps a 1x28x28 MNIST image to a log-probability distribution over digits 0-9.
+
+    Convolutional Neural Network module that takes a single-channel 28x28 input
+    image and produces a 10-dimensional log-probability vector via a series of
+    four convolutional blocks (conv → ReLU → optional pooling), a dropout, and
+    two fully connected layers.
+
+    Args:
+        conv1_size (int):   Number of output channels for the first conv layer.
+        conv2_size (int):   Number of output channels for the second conv layer.
+        conv3_size (int):   Number of output channels for the third conv layer.
+        conv4_size (int):   Number of output channels for the fourth conv layer.
+
+    Input:
+        x (torch.Tensor):   Float tensor of shape (N, 1, 28, 28), where N is batch size.
+
+    Output:
+        torch.Tensor:       Float tensor of shape (N, 10) containing log-probabilities
+                            for each digit class.
+
+    """
 
     # Net class inherits from nn.Module, which is the base class for all
     # neural network modules in PyTorch. Inheriting from nn.Module allows you to
@@ -48,7 +70,7 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(512, 10)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward defines the forward pass of the network."""
+        """Defines the forward pass of the network."""
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
