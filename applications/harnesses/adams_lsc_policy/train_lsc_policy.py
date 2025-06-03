@@ -331,7 +331,7 @@ def main(
             new_flux_file = tr.continuation_setup(
                 new_chkpt_path, studyIDX, last_epoch=epochIDX
             )
-            os.system(f"flux batch {new_slurm_file}")
+            os.system(f"flux batch {new_flux_file}")
 
 
 if __name__ == "__main__":
