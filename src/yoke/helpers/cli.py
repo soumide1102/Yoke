@@ -61,7 +61,7 @@ def add_default_args(parser: argparse.ArgumentParser = None) -> argparse.Argumen
         default="slurm",
         help=(
             "Which job‐submission wrapper to use (defaults to slurm, "
-            "choices: slurm, shell, batch).",
+            "choices: slurm, shell, batch)."
         ),
     )
 

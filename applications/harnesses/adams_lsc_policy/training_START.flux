@@ -50,6 +50,7 @@ export ROCMVERSION=6.2.4
 module load rocm/$ROCMVERSION
 module load cray-python/3.11.7
 source /g/g12/hickmann/yoke_250415/bin/activate
+export adams_python=/g/g12/hickmann/yoke_250415/bin/python
 
 # Get start time
 export date00=`date`
@@ -59,7 +60,7 @@ export date00=`date`
 # flux run python -c "import torch; x = torch.rand(3, 3); print(x)"
 # flux run python -c "import torch; print(torch.cuda.is_available())"
 
-flux run python -u <train_script> @study<studyIDX>_START.input
+flux run $adams_python -u <train_script> @study<studyIDX>_START.input
 
 # Get end time and print to stdout
 export date01=`date`
