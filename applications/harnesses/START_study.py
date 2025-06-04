@@ -168,7 +168,7 @@ for k, study in enumerate(studylist):
 
     if args.submissionType.lower() == "flux":
         flux_cmd = (
-            f"cd {studydirname}; flux batch {START_slurm_name}; "
+            f"cd {studydirname}; flux batch {START_flux_name}; "
             f"cd {os.path.dirname(__file__)}"
         )
         os.system(flux_cmd)
