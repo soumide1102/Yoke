@@ -22,6 +22,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from yoke.models.hybridCNNmodules import hybrid2vectorCNN
 from yoke.datasets.lsc_dataset import LSC_hfield_reward_DataSet
 import yoke.torch_training_utils as tr  # Assuming this exists
+from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli  # Assuming this exists
 
 #############################################
@@ -36,6 +37,8 @@ parser = argparse.ArgumentParser(
 parser = cli.add_default_args(parser=parser)
 parser = cli.add_filepath_args(parser=parser)
 parser = cli.add_training_args(parser=parser)
+parser = cli.add_cosine_lr_scheduler_args(parser=parser)
+
 
 # Change some default filepaths.
 parser.set_defaults(design_file="design_lsc240420_MASTER.csv")
@@ -100,7 +103,13 @@ def main(
     design_file = os.path.abspath(args.LSC_DESIGN_DIR + args.design_file)
     train_filelist = args.FILELIST_DIR + args.train_filelist
     validation_filelist = args.FILELIST_DIR + args.validation_filelist
-    test_filelist = args.FILELIST_DIR + args.test_filelist
+
+    # LR-schedule Parameters
+    anchor_lr = args.anchor_lr
+    num_cycles = args.num_cycles
+    min_fraction = args.min_fraction
+    terminal_steps = args.terminal_steps
+    warmup_steps = args.warmup_steps
 
     # Number of workers controls how batches of data are prefetched and,
     # possibly, pre-loaded onto GPUs. If the number of workers is large they
@@ -132,25 +141,31 @@ def main(
     print("Number of System CPUs:", os.cpu_count())
     print("Number of CPUs per GPU:", os.environ["SLURM_JOB_CPUS_PER_NODE"])
 
+    # Dictionary of available models.
+    available_models = {
+        "hybrid2vectorCNN": hybrid2vectorCNN
+    }
+    
+    #############################################
+    # Model arguments
+    #############################################
+    model_args = {
+        "img_size": (1, 1120, 400),
+        "input_vector_size": 28,
+        "output_dim": 1,
+        "features": 12,
+        "depth": 12,
+        "kernel": 3,
+        "img_embed_dim": 32,
+        "vector_embed_dim": 32,
+        "size_reduce_threshold": (8, 8),
+        "vector_feature_list": (32, 32, 64, 64),
+        "output_feature_list": (64, 128, 128, 64),
+        "act_layer": nn.GELU,
+        "norm_layer": nn.LayerNorm
+        }
 
-    #############################################
-    # Model
-    #############################################
-    model = hybrid2vectorCNN(img_size = (1, 1120, 400),
-        input_vector_size = 28,
-        output_dim = 1,
-        features = 12,
-        depth = 12,
-        kernel = 3,
-        img_embed_dim = 32,
-        vector_embed_dim = 32,
-        size_reduce_threshold = (8, 8),
-        vector_feature_list = (32, 32, 64, 64),
-        output_feature_list = (64, 128, 128, 64),
-        act_layer = nn.GELU,
-        norm_layer = nn.LayerNorm
-        )
-    #model.to(args.device)
+    model = hybrid2vectorCNN(**model_args)
 
     #############################################
     # Initialize optimizer
@@ -176,22 +191,49 @@ def main(
     # Wait to move model to GPU until after the checkpoint load. Then
     # explicitly move model and optimizer state to GPU.
     if CONTINUATION:
-        starting_epoch = tr.load_model_and_optimizer_hdf5(model, optimizer, checkpoint)
+        model, starting_epoch = tr.load_model_and_optimizer(
+            checkpoint,
+            optimizer,
+            available_models,
+            device=device
+        )
         print("Model state loaded for continuation.")
     else:
+        model.to(device)
         starting_epoch = 0
-
-    model.to(device)
 
     #############################################
     # Move Model to DistributedDataParallel
     #############################################
     model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
-    for state in optimizer.state.values():
-        for k, v in state.items():
-            if isinstance(v, torch.Tensor):
-                state[k] = v.to(device)
+    #############################################
+    # Learning Rate Scheduler
+    #############################################
+    if starting_epoch == 0:
+        last_epoch = -1
+    else:
+        last_epoch = train_batches * (starting_epoch - 1)
+
+    # Scale the anchor LR by global batchsize
+    #
+    # # For multi-node
+    #lr_scale = np.sqrt(float(Ngpus) * float(Knodes) * float(batch_size))
+    #original_batchsize = 40.0  # 1 node, 4 gpus, 10 samples/gpu
+    #ddp_anchor_lr = anchor_lr * lr_scale / original_batchsize
+    #
+    # For single node
+    ddp_anchor_lr = anchor_lr
+
+    LRsched = CosineWithWarmupScheduler(
+        optimizer,
+        anchor_lr=ddp_anchor_lr,
+        terminal_steps=terminal_steps,
+        warmup_steps=warmup_steps,
+        num_cycles=num_cycles,
+        min_fraction=min_fraction,
+        last_epoch=last_epoch,
+    )
 
     #############################################
     # Data Initialization (Distributed Dataloader)
@@ -261,6 +303,7 @@ def main(
             model=model,
             optimizer=optimizer,
             loss_fn=loss_fn,
+            LRsched=LRsched,
             epochIDX=epochIDX,
             train_per_val=train_per_val,
             train_rcrd_filename=trn_rcrd_filename,
@@ -293,7 +336,7 @@ def main(
         optimizer,
         epochIDX,
         new_chkpt_path,
-        model_class=hybrid2vectorCNN,  # SOUMI: check if this would work
+        model_class=hybrid2vectorCNN,
         model_args=model_args
     )
 
