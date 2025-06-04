@@ -2246,13 +2246,15 @@ def train_lsc_reward_datastep(
     targetH = targetH.to(device, non_blocking=True)
     reward = reward.to(device, non_blocking=True)
 
+    # make reward shape (batch,1) to match pred.shape
+    reward = reward.unsqueeze(1)
+
     # Forward pass
     pred = model(state_y, stateH, targetH)
-    #pred_mean = pred_distribution.mean
 
     # Compute loss
     loss = loss_fn(pred, reward)
-    per_sample_loss = loss.mean(dim=1)  # Per-sample loss
+    per_sample_loss = loss  # Per-sample loss
 
     # Backward pass and optimization
     optimizer.zero_grad(set_to_none=True)
@@ -2300,16 +2302,16 @@ def eval_lsc_reward_datastep(
     stateH = stateH.to(device, non_blocking=True)
     targetH = targetH.to(device, non_blocking=True)
     reward = reward.to(device, non_blocking=True)
+    # make reward shape (batch,1) to match pred.shape
+    reward = reward.unsqueeze(1)
 
     # Forward pass
     with torch.no_grad():
         pred = model(state_y, stateH, targetH)
 
-    #pred_mean = pred_distribution.mean
-
     # Compute loss
     loss = loss_fn(pred, reward)
-    per_sample_loss = loss.mean(dim=1)  # Per-sample loss
+    per_sample_loss = loss  # Per-sample loss
 
     # Gather per-sample losses from all processes
     gathered_losses = [torch.zeros_like(per_sample_loss) for _ in range(world_size)]
@@ -2375,7 +2377,7 @@ def train_lsc_reward_epoch(
                 break
 
             # Perform a single training step
-            x_true, pred_mean, train_losses = train_lsc_reward_datastep(
+            reward_true, pred_mean, train_losses = train_lsc_reward_datastep(
                 traindata, model, optimizer, loss_fn, device, rank, world_size
             )
 
@@ -2400,7 +2402,7 @@ def train_lsc_reward_epoch(
                     if valbatch_ID >= num_val_batches:
                         break
 
-                    x_true, pred_mean, val_losses = eval_lsc_reward_datastep(
+                    reward_true, pred_mean, val_losses = eval_lsc_reward_datastep(
                         valdata, model, loss_fn, device, rank, world_size,
                     )
 
