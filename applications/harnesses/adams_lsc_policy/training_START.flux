@@ -33,14 +33,12 @@ echo "MASTER_ADDR=$MASTER_ADDR  MASTER_PORT=$MASTER_PORT"
 # ——————————————————————————————————————————————————————————————
 # What GPUs do we have?
 flux resource list
-# AMD’s equivalent of nvidia-smi
-/opt/rocm/bin/rocm-smi
 
 # ——————————————————————————————————————————————————————————————
 # 3) NCCL (ROCm-NCCL) / OpenMP tuning
 # ——————————————————————————————————————————————————————————————
 # Check possible interfaces (IFNAME) with `ip link show`? 
-export NCCL_SOCKET_IFNAME=hsn0
+export NCCL_SOCKET_IFNAME=hsi0
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=INIT
 export OMP_NUM_THREADS=10
@@ -51,6 +49,9 @@ module load rocm/$ROCMVERSION
 module load cray-python/3.11.7
 source /g/g12/hickmann/yoke_250415/bin/activate
 export adams_python=/g/g12/hickmann/yoke_250415/bin/python
+
+# AMD’s equivalent of nvidia-smi
+rocm-smi
 
 # Get start time
 export date00=`date`
