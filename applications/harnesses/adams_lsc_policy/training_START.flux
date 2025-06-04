@@ -32,7 +32,7 @@ echo "MASTER_ADDR=$MASTER_ADDR  MASTER_PORT=$MASTER_PORT"
 # 2) Show GPU topology
 # ——————————————————————————————————————————————————————————————
 # What GPUs do we have?
-flux resource list -t gpu -o partid,nnodes,ncores,ngpus
+flux resource list
 # AMD’s equivalent of nvidia-smi
 /opt/rocm/bin/rocm-smi
 
