@@ -29,9 +29,17 @@ if args.submissionType.lower() == "slurm":
     training_START_slurm = "./training_START.slurm"
     training_slurm_tmpl = "./training_slurm.tmpl"
 
-if args.submissionType.lower() == "flux":
+elif args.submissionType.lower() == "flux":
     training_START_flux = "./training_START.flux"
     training_flux_tmpl = "./training_flux.tmpl"
+
+elif args.submissionType.lower() == "shell":
+    training_START_shell = "./training_START.sh"
+    training_shell_tmpl = "./training_shell.tmpl"
+
+elif args.submissionType.lower() == "batch":
+    training_START_batch = "./training_START.bat"
+    training_batch_tmpl = "./training_batch.tmpl"
 
 training_json = "./slurm_config.json"
 
@@ -129,8 +137,6 @@ for k, study in enumerate(studylist):
         with open(START_slurm_filepath, "w") as f:
             f.write(START_slurm_data)
 
-    training_START_flux = "./training_START.flux"
-    training_flux_tmpl = "./training_flux.tmpl"
     if args.submissionType.lower() == "flux":
         # Make new training_flux.tmpl file
         with open(training_flux_tmpl) as f:
@@ -154,6 +160,52 @@ for k, study in enumerate(studylist):
         with open(START_flux_filepath, "w") as f:
             f.write(START_flux_data)
 
+    if args.submissionType.lower() == "shell":
+        # Make new training_shell.tmpl file
+        with open(training_shell_tmpl) as f:
+            training_shell_data = f.read()
+
+        training_shell_data = strings.replace_keys(study, training_shell_data)
+        training_shell_filepath = os.path.join(studydirname, "training_shell.tmpl")
+
+        with open(training_shell_filepath, "w") as f:
+            f.write(training_shell_data)
+
+        # Make a new training_START.sh file
+        with open(training_START_shell) as f:
+            START_shell_data = f.read()
+
+        START_shell_data = strings.replace_keys(study, START_shell_data)
+
+        START_shell_name = "study{:03d}_START.sh".format(study["studyIDX"])
+        START_shell_filepath = os.path.join(studydirname, START_shell_name)
+
+        with open(START_shell_filepath, "w") as f:
+            f.write(START_shell_data)
+
+    if args.submissionType.lower() == "batch":
+        # Make new training_batch.tmpl file
+        with open(training_batch_tmpl) as f:
+            training_batch_data = f.read()
+
+        training_batch_data = strings.replace_keys(study, training_batch_data)
+        training_batch_filepath = os.path.join(studydirname, "training_batch.tmpl")
+
+        with open(training_batch_filepath, "w") as f:
+            f.write(training_batch_data)
+
+        # Make a new training_START.bat file
+        with open(training_START_batch) as f:
+            START_batch_data = f.read()
+
+        START_batch_data = strings.replace_keys(study, START_batch_data)
+
+        START_batch_name = "study{:03d}_START.bat".format(study["studyIDX"])
+        START_batch_filepath = os.path.join(studydirname, START_batch_name)
+
+        with open(START_batch_filepath, "w") as f:
+            f.write(START_batch_data)
+
     # Copy files to study directory from list
     for f in cp_file_list:
         shutil.copy(f, studydirname)
@@ -174,20 +226,17 @@ for k, study in enumerate(studylist):
         os.system(flux_cmd)
 
     elif args.submissionType.lower() == "shell":
-        wrapper = Path(__file__).parent / "run_study.sh"
-        subprocess.run(
-            [str(wrapper), study["train_script"], START_input_name],
-            cwd=studydirname,
-            check=True,
+        shell_cmd = (
+            f"cd {studydirname}; source {START_shell_name}; "
+            f"cd {os.path.dirname(__file__)}"
         )
+        os.system(shell_cmd)
 
     elif args.submissionType.lower() == "batch":
         harness_dir = Path(args.csv).parent.resolve()
-        wrapper = harness_dir / "run_study.bat"
+        wrapper = harness_dir / START_batch_name
         if not wrapper.exists():
             raise FileNotFoundError(f"Cannot find batch wrapper at {wrapper!r}")
-
-        abs_wrapper = str(wrapper)
 
         subprocess.run(
             ["cmd.exe", "/c", str(wrapper), study["train_script"], START_input_name],
