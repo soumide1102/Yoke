@@ -574,9 +574,15 @@ def continuation_setup(
 ####################################
 # Training on a Datastep
 ####################################
-def train_scalar_datastep(data: tuple, model, optimizer, loss_fn, device: torch.device):
-    """Function to complete a training step on a single sample in which the
-    network's output is a scalar.
+def train_scalar_datastep(
+        data: tuple,
+        model: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        loss_fn: torch.nn.Module,
+        device: torch.device) -> tuple:
+    """Function to complete a training step on a single sample.
+
+    For this training step the network's output is a scalar.
 
     Args:
         data (tuple): tuple of model input and corresponding ground truth
