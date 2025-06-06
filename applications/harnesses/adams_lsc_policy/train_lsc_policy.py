@@ -329,7 +329,10 @@ def main(
         FINISHED_TRAINING = epochIDX + 1 > total_epochs
         if not FINISHED_TRAINING:
             new_flux_file = tr.continuation_setup(
-                new_chkpt_path, studyIDX, last_epoch=epochIDX
+                new_chkpt_path,
+                studyIDX,
+                last_epoch=epochIDX,
+                submissionType='flux',
             )
             os.system(f"flux batch {new_flux_file}")
 
