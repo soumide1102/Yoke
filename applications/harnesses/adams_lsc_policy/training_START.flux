@@ -8,7 +8,7 @@
 
 #flux: --job-name=lscpolicy_s<studyIDX>_e0001
 #flux: --time=20m
-#flux: --queue=pdebug
+#flux: --queue=plarge
 #flux: --nodes=1
 #flux: -n 4  # total number of tasks across all nodes.
 #flux: -g 1  # --gpus-per-task=1
