@@ -137,7 +137,7 @@ for k, study in enumerate(studylist):
         with open(START_slurm_filepath, "w") as f:
             f.write(START_slurm_data)
 
-    if args.submissionType.lower() == "flux":
+    elif args.submissionType.lower() == "flux":
         # Make new training_flux.tmpl file
         with open(training_flux_tmpl) as f:
             training_flux_data = f.read()
@@ -160,7 +160,7 @@ for k, study in enumerate(studylist):
         with open(START_flux_filepath, "w") as f:
             f.write(START_flux_data)
 
-    if args.submissionType.lower() == "shell":
+    elif args.submissionType.lower() == "shell":
         # Make new training_shell.tmpl file
         with open(training_shell_tmpl) as f:
             training_shell_data = f.read()
@@ -183,7 +183,7 @@ for k, study in enumerate(studylist):
         with open(START_shell_filepath, "w") as f:
             f.write(START_shell_data)
 
-    if args.submissionType.lower() == "batch":
+    elif args.submissionType.lower() == "batch":
         # Make new training_batch.tmpl file
         with open(training_batch_tmpl) as f:
             training_batch_data = f.read()
@@ -218,7 +218,7 @@ for k, study in enumerate(studylist):
         )
         os.system(slurm_cmd)
 
-    if args.submissionType.lower() == "flux":
+    elif args.submissionType.lower() == "flux":
         flux_cmd = (
             f"cd {studydirname}; flux batch {START_flux_name}; "
             f"cd {os.path.dirname(__file__)}"
