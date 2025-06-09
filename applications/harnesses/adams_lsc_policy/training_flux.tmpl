@@ -32,7 +32,7 @@ echo "MASTER_ADDR=$MASTER_ADDR  MASTER_PORT=$MASTER_PORT"
 # 2) Show GPU topology
 # ——————————————————————————————————————————————————————————————
 # What GPUs do we have?
-flux resource list
+flux --parent resource list
 
 # ——————————————————————————————————————————————————————————————
 # 3) NCCL (ROCm-NCCL) / OpenMP tuning

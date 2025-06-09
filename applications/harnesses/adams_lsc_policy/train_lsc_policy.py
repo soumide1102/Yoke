@@ -334,7 +334,7 @@ def main(
                 last_epoch=epochIDX,
                 submissionType='flux',
             )
-            os.system(f"flux batch {new_flux_file}")
+            os.system(f"flux --parent batch {new_flux_file}")
 
 
 if __name__ == "__main__":
