@@ -12,14 +12,13 @@
 # `gpu40only`. 
 
 #SBATCH --job-name=lscreward_s<studyIDX>_e0001
-#SBATCH --account=xd_g
+#SBATCH --account=w25_artimis_g
 #SBATCH --nodes=<KNODES>
 #SBATCH --ntasks-per-node=<NGPUS>
 #SBATCH --gpus-per-node=<NGPUS>
 #SBATCH --cpus-per-task=16
-#SBATCH --partition=gpu_debug 
-#SBATCH --reservation=gpu_debug
-#SBATCH --time=00:20:00
+#SBATCH --partition=gpu
+#SBATCH --time=1:20:00
 #SBATCH --output=study<studyIDX>_epoch0001.out
 #SBATCH --error=study<studyIDX>_epoch0001.err
 #SBATCH -vvv
