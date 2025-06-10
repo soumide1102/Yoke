@@ -1,13 +1,18 @@
 """Tests for Bomberman architecture."""
 
 import pytest
-
 from lightning.pytorch import Trainer
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import _LRScheduler
 
 from yoke.models.vit.swin.bomberman import LodeRunner, Lightning_LodeRunner
+
+
+# Ignore only SLURM "srun" warning
+pytestmark = pytest.mark.filterwarnings(
+    "ignore: The `srun` command is available on your system but is not used"
+)
 
 
 class MockScheduler(_LRScheduler):
@@ -25,6 +30,7 @@ class MockScheduler(_LRScheduler):
 @pytest.fixture
 def loderunner_model() -> LodeRunner:
     """Fixture for LodeRunner tests."""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     return LodeRunner(
         default_vars=["var1", "var2", "var3"],
         image_size=(1120, 800),
@@ -36,7 +42,7 @@ def loderunner_model() -> LodeRunner:
         window_sizes=[(8, 8), (8, 8), (4, 4), (2, 2)],
         patch_merge_scales=[(2, 2), (2, 2), (2, 2)],
         verbose=False,
-    )
+    ).to(device)
 
 
 @pytest.fixture
@@ -51,7 +57,9 @@ def lightning_model(loderunner_model: LodeRunner) -> Lightning_LodeRunner:
         loss_fn=nn.MSELoss(reduction="none"),
         scheduled_sampling_scheduler=lambda global_step: 1.0,
     )
+
     lightning_loderunner.trainer = Trainer(logger=False)
+
     return lightning_loderunner
 
 
@@ -64,10 +72,13 @@ def test_loderunner_init(loderunner_model: LodeRunner) -> None:
 
 def test_loderunner_forward(loderunner_model: LodeRunner) -> None:
     """Test forward method."""
-    x = torch.randn(2, 3, 1120, 800)  # Batch size of 2, 3 channels, image size
-    in_vars = torch.tensor([0, 1, 2])
-    out_vars = torch.tensor([0, 1])
-    lead_times = torch.rand(2)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Batch size of 2, 3 channels, image size
+    x = torch.randn(2, 3, 1120, 800).to(device)
+    in_vars = torch.tensor([0, 1, 2]).to(device)
+    out_vars = torch.tensor([0, 1]).to(device)
+    lead_times = torch.rand(2).to(device)
 
     output = loderunner_model(x, in_vars, out_vars, lead_times)
     assert isinstance(output, torch.Tensor)
@@ -83,8 +94,11 @@ def test_lightning_model_init(lightning_model: Lightning_LodeRunner) -> None:
 
 def test_lightning_model_forward(lightning_model: Lightning_LodeRunner) -> None:
     """Test forward."""
-    x = torch.randn(2, 3, 1120, 800)  # Batch size of 2, 3 channels, image size
-    lead_times = torch.rand(2)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Batch size of 2, 3 channels, image size
+    x = torch.randn(2, 3, 1120, 800).to(device)
+    lead_times = torch.rand(2).to(device)
 
     output = lightning_model(x, lead_times)
     assert isinstance(output, torch.Tensor)
@@ -92,9 +106,11 @@ def test_lightning_model_forward(lightning_model: Lightning_LodeRunner) -> None:
 
 def test_training_step(lightning_model: Lightning_LodeRunner) -> None:
     """Test lightning training step."""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     batch = (
-        torch.randn(2, 2, 3, 1120, 800),  # img_seq
-        torch.rand(2),  # lead_times
+        torch.randn(2, 2, 3, 1120, 800).to(device),  # img_seq
+        torch.rand(2).to(device),  # lead_times
     )
 
     batch_loss = lightning_model.training_step(batch, batch_idx=0)
@@ -103,9 +119,11 @@ def test_training_step(lightning_model: Lightning_LodeRunner) -> None:
 
 def test_validation_step(lightning_model: Lightning_LodeRunner) -> None:
     """Test lightning validation step."""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     batch = (
-        torch.randn(2, 2, 3, 1120, 800),  # img_seq
-        torch.rand(2),  # lead_times
+        torch.randn(2, 2, 3, 1120, 800).to(device),  # img_seq
+        torch.rand(2).to(device),  # lead_times
     )
 
     lightning_model.validation_step(batch, batch_idx=0)
