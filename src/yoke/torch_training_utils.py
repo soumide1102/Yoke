@@ -2406,6 +2406,7 @@ def train_lsc_reward_epoch(
     model,
     optimizer,
     loss_fn,
+    LRsched,
     epochIDX,
     train_per_val,
     train_rcrd_filename: str,
@@ -2425,6 +2426,8 @@ def train_lsc_reward_epoch(
         num_val_batches (int): Number of batches in validation epoch
         model (loaded pytorch model): model to train
         optimizer (torch.optim): optimizer for training set
+        LRsched (torch.optim.lr_scheduler): Learning-rate scheduler that will be called
+                                            every training step.
         loss_fn (torch.nn Loss Function): loss function for training set
         epochIDX (int): Index of current training epoch
         train_per_val (int): Number of Training epochs between each validation
@@ -2452,6 +2455,9 @@ def train_lsc_reward_epoch(
             reward_true, pred_mean, train_losses = train_lsc_reward_datastep(
                 traindata, model, optimizer, loss_fn, device, rank, world_size
             )
+
+            # Increment the learning-rate scheduler
+            LRsched.step()
 
             # Save training record (rank 0 only)
             if rank == 0:
