@@ -150,7 +150,7 @@ def main(
     # Model arguments
     #############################################
     model_args = {
-        "img_size": (1, 1120, 400),
+        "img_size": (1, 1120, 800),
         "input_vector_size": 28,
         "output_dim": 1,
         "features": 12,
