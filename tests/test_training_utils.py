@@ -1,6 +1,7 @@
 """Tests for torch training utilities."""
 
 import os
+import pathlib
 import pytest
 import torch
 from torch import nn, optim
@@ -12,6 +13,10 @@ from yoke.torch_training_utils import count_torch_params
 from yoke.torch_training_utils import save_model_and_optimizer_hdf5
 from yoke.torch_training_utils import load_model_and_optimizer_hdf5
 from yoke.torch_training_utils import make_dataloader
+from torch.optim import SGD
+from torch.optim.lr_scheduler import StepLR
+import yoke.torch_training_utils as ttu
+from yoke.torch_training_utils import train_lsc_reward_epoch
 
 
 class SimpleModel(nn.Module):
@@ -285,3 +290,153 @@ def test_make_dataloader_parametrized(
     sampled_data = list(dataloader)
     for batch in sampled_data[:-1]:
         assert batch.shape[0] == batch_size
+
+
+@pytest.fixture(autouse=True)
+def patch_datasteps(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub out reward datastep functions.
+
+    They would return fixed losses for epoch tests.
+    """
+
+    def fake_train(
+        data: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        model: torch.nn.Module,
+        opt: optim.Optimizer,
+        loss_fn: torch.nn.Module,
+        dev: torch.device,
+        rank: int,
+        ws: int,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        batch = data[0].shape[0]
+        reward = data[3].unsqueeze(1).to(dev)
+        pred = data[0].to(dev)
+        losses = torch.full((batch, 1), 0.5, device=dev)
+        return reward, pred, losses
+
+    def fake_eval(
+        data: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        model: torch.nn.Module,
+        loss_fn: torch.nn.Module,
+        dev: torch.device,
+        rank: int,
+        ws: int,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        batch = data[0].shape[0]
+        reward = data[3].unsqueeze(1).to(dev)
+        pred = data[0].to(dev)
+        losses = torch.full((batch, 1), 0.25, device=dev)
+        return reward, pred, losses
+
+    monkeypatch.setattr(
+        ttu,
+        "train_lsc_reward_datastep",
+        fake_train,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        ttu,
+        "eval_lsc_reward_datastep",
+        fake_eval,
+        raising=True,
+    )
+
+
+def make_lsc_data(
+    batch_size: int = 4,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Create dummy LSC data.
+
+    Makes a tuple: state_y, stateH, targetH of shape (batch,1), reward of shape (batch,).
+    """
+    state_y = torch.arange(batch_size, dtype=torch.float32).unsqueeze(1)
+    stateH = state_y + 1.0
+    targetH = state_y + 2.0
+    reward = torch.arange(batch_size, dtype=torch.float32)
+    return state_y, stateH, targetH, reward
+
+
+def make_dataset(
+    batch_size: int, num_batches: int
+) -> list[tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
+    """Build a list of dummy batches for training or validation loops."""
+    return [make_lsc_data(batch_size) for _ in range(num_batches)]
+
+
+def test_train_epoch_writes_records(tmp_path: pathlib.Path) -> None:
+    """train_lsc_reward_epoch should write correct CSV records for train and val."""
+    train_data = make_dataset(batch_size=2, num_batches=3)
+    val_data = make_dataset(batch_size=3, num_batches=2)
+    model = torch.nn.Linear(1, 1)
+    optimizer = SGD(model.parameters(), lr=0.01)
+    loss_fn = torch.nn.MSELoss(reduction="none")
+    sched = StepLR(optimizer, step_size=1)
+    train_file = tmp_path / "train_<epochIDX>.csv"
+    val_file = tmp_path / "val_<epochIDX>.csv"
+
+    train_lsc_reward_epoch(
+        training_data=train_data,
+        validation_data=val_data,
+        num_train_batches=2,
+        num_val_batches=1,
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        LRsched=sched,
+        epochIDX=7,
+        train_per_val=1,
+        train_rcrd_filename=str(train_file),
+        val_rcrd_filename=str(val_file),
+        device=torch.device("cpu"),
+        rank=0,
+        world_size=1,
+    )
+
+    # train: 2 batches × 2 samples = 4 lines
+    train_lines = (tmp_path / "train_0007.csv").read_text().splitlines()
+    assert len(train_lines) == 4
+    for line in train_lines:
+        ep, bid, loss = line.split(", ")
+        assert ep == "7"
+        assert bid in {"0", "1"}
+        assert loss == "0.50000000"
+
+    # val: 1 batch × 3 samples = 3 lines
+    val_lines = (tmp_path / "val_0007.csv").read_text().splitlines()
+    assert len(val_lines) == 3
+    for line in val_lines:
+        ep, bid, loss = line.split(", ")
+        assert ep == "7"
+        assert bid == "0"
+        assert loss == "0.25000000"
+
+
+def test_train_epoch_rank_not_zero(tmp_path: pathlib.Path) -> None:
+    """rank!=0 should not create any CSV files."""
+    model = torch.nn.Linear(1, 1)
+    optimizer = SGD(model.parameters(), lr=0.01)
+    loss_fn = torch.nn.MSELoss(reduction="none")
+    sched = StepLR(optimizer, step_size=1)
+    train_file = tmp_path / "train_<epochIDX>.csv"
+    val_file = tmp_path / "val_<epochIDX>.csv"
+
+    train_lsc_reward_epoch(
+        training_data=make_dataset(1, 1),
+        validation_data=make_dataset(1, 1),
+        num_train_batches=1,
+        num_val_batches=1,
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        LRsched=sched,
+        epochIDX=1,
+        train_per_val=1,
+        train_rcrd_filename=str(train_file),
+        val_rcrd_filename=str(val_file),
+        device=torch.device("cpu"),
+        rank=1,
+        world_size=1,
+    )
+
+    assert not (tmp_path / "train_0001.csv").exists()
+    assert not (tmp_path / "val_0001.csv").exists()
