@@ -1763,12 +1763,12 @@ def train_LRsched_loderunner_epoch(
     model,
     optimizer,
     loss_fn,
-    LRsched,
     epochIDX,
     train_per_val,
     train_rcrd_filename: str,
     val_rcrd_filename: str,
     device: torch.device,
+    LRsched=None,
     verbose: bool=False,
 ):
     """Function to complete a training epoch on the LodeRunner architecture with
@@ -1812,8 +1812,14 @@ def train_LRsched_loderunner_epoch(
                 traindata, model, optimizer, loss_fn, device, channel_map
             )
 
-            # Increment the learning-rate scheduler
-            LRsched.step()
+            if LRsched is None:
+                # Increment the learning-rate scheduler
+                print("NOT executing LRsched")
+
+            if LRsched is not None:
+                # Increment the learning-rate scheduler
+                print("executing LRsched")
+                LRsched.step()
 
             if verbose:
                 endTime = time.time()
