@@ -364,7 +364,8 @@ def make_dataset(
 
 
 @pytest.mark.filterwarnings(
-    "ignore:Detected call of `lr_scheduler.step\\(\\)` before `optimizer.step\\(\\)`:UserWarning"
+    "ignore:Detected call of `lr_scheduler.step\\(\\)` before "
+    "`optimizer.step\\(\\)`:UserWarning"
 )
 def test_train_epoch_writes_records(tmp_path: pathlib.Path) -> None:
     """train_lsc_reward_epoch should write correct CSV records for train and val."""
@@ -415,7 +416,8 @@ def test_train_epoch_writes_records(tmp_path: pathlib.Path) -> None:
 
 
 @pytest.mark.filterwarnings(
-    "ignore:Detected call of `lr_scheduler.step\\(\\)` before `optimizer.step\\(\\)`:UserWarning"
+    "ignore:Detected call of `lr_scheduler.step\\(\\)` before "
+    "`optimizer.step\\(\\)`:UserWarning"
 )
 def test_train_epoch_rank_not_zero(tmp_path: pathlib.Path) -> None:
     """rank!=0 should not create any CSV files."""
