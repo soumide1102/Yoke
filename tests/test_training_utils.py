@@ -363,6 +363,9 @@ def make_dataset(
     return [make_lsc_data(batch_size) for _ in range(num_batches)]
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Detected call of `lr_scheduler.step\\(\\)` before `optimizer.step\\(\\)`:UserWarning"
+)
 def test_train_epoch_writes_records(tmp_path: pathlib.Path) -> None:
     """train_lsc_reward_epoch should write correct CSV records for train and val."""
     train_data = make_dataset(batch_size=2, num_batches=3)
@@ -411,6 +414,9 @@ def test_train_epoch_writes_records(tmp_path: pathlib.Path) -> None:
         assert loss == "0.25000000"
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Detected call of `lr_scheduler.step\\(\\)` before `optimizer.step\\(\\)`:UserWarning"
+)
 def test_train_epoch_rank_not_zero(tmp_path: pathlib.Path) -> None:
     """rank!=0 should not create any CSV files."""
     model = torch.nn.Linear(1, 1)
