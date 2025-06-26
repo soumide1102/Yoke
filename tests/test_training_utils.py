@@ -6,6 +6,7 @@ import pytest
 import torch
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
+import torch.distributed as dist
 from tempfile import TemporaryDirectory
 import h5py
 from collections.abc import Generator
@@ -16,7 +17,7 @@ from yoke.torch_training_utils import make_dataloader
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 import yoke.torch_training_utils as ttu
-from yoke.torch_training_utils import train_lsc_reward_epoch
+from yoke.torch_training_utils import train_lsc_reward_epoch, eval_lsc_reward_datastep
 
 
 class SimpleModel(nn.Module):
@@ -342,6 +343,49 @@ def patch_datasteps(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def patch_dist_all_gather(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch torch.distributed.all_gather so it does'nt require process group init."""
+
+    def fake_all_gather(gather_list: list[torch.Tensor], local: torch.Tensor) -> None:
+        for i in range(len(gather_list)):
+            gather_list[i].copy_(local)
+
+    monkeypatch.setattr(dist, "all_gather", fake_all_gather, raising=True)
+
+
+class DummyRewardModel(torch.nn.Module):
+    """Identity model mapping (batch,1) → (batch,1)."""
+
+    def __init__(self) -> None:
+        """Initialize the DummyRewardModel.
+
+        Sets up a single linear layer (1→1) with weight fixed to 1.0
+        and no bias, so output equals input.
+        """
+        super().__init__()
+        self.linear = torch.nn.Linear(1, 1, bias=False)
+        torch.nn.init.constant_(self.linear.weight, 1.0)
+
+    def forward(
+        self,
+        state_y: torch.Tensor,
+        stateH: torch.Tensor,
+        targetH: torch.Tensor,
+    ) -> torch.Tensor:
+        """Perform a forward pass.
+
+        Args:
+            state_y: Main input tensor of shape (batch,1).
+            stateH: Secondary input tensor of shape (batch,1) (unused).
+            targetH: Tertiary input tensor of shape (batch,1) (unused).
+
+        Returns:
+            A tensor of shape (batch,1) identical to state_y.
+        """
+        return self.linear(state_y)
+
+
 def make_lsc_data(
     batch_size: int = 4,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -448,3 +492,52 @@ def test_train_epoch_rank_not_zero(tmp_path: pathlib.Path) -> None:
 
     assert not (tmp_path / "train_0001.csv").exists()
     assert not (tmp_path / "val_0001.csv").exists()
+
+
+def test_eval_lsc_reward_datastep_rank0() -> None:
+    """rank=0 returns reward, pred, and concatenated losses for all ranks."""
+    device = torch.device("cpu")
+    model = DummyRewardModel()
+    loss_fn = torch.nn.MSELoss(reduction="none")
+    data = make_lsc_data(batch_size=3)
+    rank = 0
+    world_size = 2
+
+    reward_out, pred_out, all_losses = eval_lsc_reward_datastep(
+        data, model, loss_fn, device, rank, world_size
+    )
+
+    # reward should be (batch,1)
+    expected_reward = data[3].unsqueeze(1).to(device)
+    assert torch.equal(reward_out, expected_reward)
+
+    # pred should match state_y
+    assert torch.equal(pred_out, data[0])
+
+    # loss = (pred - reward)^2
+    diff = pred_out - expected_reward
+    expected_loss = diff * diff
+
+    # all_losses is two copies concatenated
+    expected_all = torch.cat([expected_loss, expected_loss], dim=0)
+    assert all_losses is not None
+    assert all_losses.shape == expected_all.shape
+    assert torch.allclose(all_losses, expected_all)
+
+
+def test_eval_lsc_reward_datastep_rank_nonzero() -> None:
+    """rank!=0 returns None for all_losses, but valid reward and pred shapes."""
+    device = torch.device("cpu")
+    model = DummyRewardModel()
+    loss_fn = torch.nn.MSELoss(reduction="none")
+    data = make_lsc_data(batch_size=5)
+    rank = 1
+    world_size = 2
+
+    reward_out, pred_out, all_losses = eval_lsc_reward_datastep(
+        data, model, loss_fn, device, rank, world_size
+    )
+
+    assert all_losses is None
+    assert reward_out.shape == (5, 1)
+    assert pred_out.shape == (5, 1)
