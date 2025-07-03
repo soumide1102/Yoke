@@ -10,6 +10,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.dataload import make_distributed_dataloader
 from yoke.utils.checkpointing import load_model_and_optimizer
 from yoke.utils.checkpointing import save_model_and_optimizer
 from yoke.lr_schedulers import CosineWithWarmupScheduler
@@ -241,7 +242,7 @@ def main(args, rank, world_size, local_rank, device):
     )
 
     # NOTE: For DDP the batch_size is the per-GPU batch_size!!!
-    train_dataloader = tr.make_distributed_dataloader(
+    train_dataloader = make_distributed_dataloader(
         train_dataset,
         batch_size,
         shuffle=True,
@@ -249,7 +250,7 @@ def main(args, rank, world_size, local_rank, device):
         rank=rank,
         world_size=world_size,
     )
-    val_dataloader = tr.make_distributed_dataloader(
+    val_dataloader = make_distributed_dataloader(
         val_dataset,
         batch_size,
         shuffle=False,
