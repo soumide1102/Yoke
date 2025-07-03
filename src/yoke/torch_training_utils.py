@@ -17,39 +17,6 @@ from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
 
 
-def count_torch_params(model, trainable=True):
-    """Count parameters in a pytorch model.
-
-    Args:
-        model (nn.Module): Model to count parameters for.
-        trainable (bool): If TRUE, count only trainable parameters.
-
-    """
-    plist = []
-    for p in model.parameters():
-        if trainable:
-            if p.requires_grad:
-                plist.append(p.numel())
-            else:
-                pass
-        else:
-            plist.append(p.numel())
-
-    return sum(plist)
-
-
-def freeze_torch_params(model):
-    """Freeze all parameters in a PyTorch model in place.
-
-    Args:
-        model (nn.Module): model to freeze.
-
-    """
-    for p in model.parameters():
-        if hasattr(p, "requires_grad"):
-            p.requires_grad = False
-
-
 ######################################################
 # Helper function for model/optimizer saving/loading
 ######################################################

@@ -22,6 +22,7 @@ import numpy as np
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.parameters import count_torch_params
 from yoke.utils.parallel import LodeRunner_DataParallel
 from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         ],
     )
 
-    print("Lode Runner parameters:", tr.count_torch_params(model, trainable=True))
+    print("Lode Runner parameters:", count_torch_params(model, trainable=True))
     # Wait to move model to GPU until after the checkpoint load. Then
     # explicitly move model and optimizer state to GPU.
 

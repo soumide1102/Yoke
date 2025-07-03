@@ -28,6 +28,7 @@ from yoke.models.vit.swin.bomberman import LodeRunner, Lightning_LodeRunner
 from yoke.datasets.lsc_dataset import LSCDataModule
 from yoke.datasets.transforms import ResizePadCrop
 import yoke.torch_training_utils as tr
+from yoke.utils.parameters import freeze_torch_params
 from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli
 import yoke.scheduled_sampling
@@ -205,7 +206,7 @@ if __name__ == "__main__":
 
     # Freeze the U-Net backbone.
     if args.freeze_backbone:
-        tr.freeze_torch_params(L_loderunner.model.unet)
+        freeze_torch_params(L_loderunner.model.unet)
 
     # Prepare Lightning logger.
     logger = TensorBoardLogger(save_dir="./")

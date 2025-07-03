@@ -10,7 +10,7 @@ import torch.distributed as dist
 from tempfile import TemporaryDirectory
 import h5py
 from collections.abc import Generator
-from yoke.torch_training_utils import count_torch_params
+from yoke.utils.parameters import count_torch_params
 from yoke.torch_training_utils import save_model_and_optimizer_hdf5
 from yoke.torch_training_utils import load_model_and_optimizer_hdf5
 from yoke.torch_training_utils import make_dataloader
