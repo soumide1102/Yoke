@@ -5,6 +5,7 @@ training utilities.
 
 """
 
+import torch
 import torch.nn as nn
 
 
@@ -21,9 +22,9 @@ class LodeRunner_DataParallel(nn.DataParallel):
     """
     def __init__(self, model: nn.Module) -> None:
         """Get it initialized using parent."""
-        super(LodeRunner_DataParallel, self).__init__(model)
+        super().__init__(model)
 
-    def forward(self, *inputs, **kwargs):
+    def forward(self, *inputs: torch.Tensor, **kwargs: object) -> torch.Tensor:
         """Handle explicit GPU splitting."""
         # Input is (start_img, in_vars, out_vars, Dt)
         image_input = inputs[0]

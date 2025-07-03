@@ -22,7 +22,7 @@ import numpy as np
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
 import yoke.torch_training_utils as tr
-from yoke.parallel_utils import LodeRunner_DataParallel
+from yoke.utils.parallel import LodeRunner_DataParallel
 from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli
 import yoke.helpers.logger as ylogger
