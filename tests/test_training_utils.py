@@ -13,7 +13,7 @@ from collections.abc import Generator
 from yoke.utils.parameters import count_torch_params
 from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
 from yoke.utils.checkpointing import load_model_and_optimizer_hdf5
-from yoke.torch_training_utils import make_dataloader
+from yoke.utils.dataload import make_dataloader
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 import yoke.torch_training_utils as ttu
