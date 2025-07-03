@@ -12,6 +12,8 @@ import torch.nn as nn
 from yoke.models.CNNmodules import PVI_SingleField_CNN
 from yoke.datasets.nestedcyl_dataset import PVI_SingleField_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.dataload import make_dataloader
+from yoke.utils.restart import continuation_setup
 from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
 from yoke.utils.checkpointing import load_model_and_optimizer_hdf5
 from yoke.helpers import cli
@@ -268,10 +270,10 @@ if __name__ == "__main__":
 
     for epochIDX in range(starting_epoch, ending_epoch):
         # Setup Dataloaders
-        train_dataloader = tr.make_dataloader(
+        train_dataloader = make_dataloader(
             train_dataset, batch_size, train_batches, num_workers=num_workers
         )
-        val_dataloader = tr.make_dataloader(
+        val_dataloader = make_dataloader(
             val_dataset, batch_size, val_batches, num_workers=num_workers
         )
 
@@ -313,7 +315,7 @@ if __name__ == "__main__":
     #############################################
     FINISHED_TRAINING = epochIDX + 1 > total_epochs
     if not FINISHED_TRAINING:
-        new_slurm_file = tr.continuation_setup(
+        new_slurm_file = continuation_setup(
             new_h5_path, studyIDX, last_epoch=epochIDX
         )
         os.system(f"sbatch {new_slurm_file}")
@@ -323,7 +325,7 @@ if __name__ == "__main__":
     #############################################
     if FINISHED_TRAINING:
         print("Testing Model . . .")
-        test_dataloader = tr.make_dataloader(test_dataset, batch_size=batch_size)
+        test_dataloader = make_dataloader(test_dataset, batch_size=batch_size)
         testbatch_ID = 0
         testing_dict = {
             "epoch": [],

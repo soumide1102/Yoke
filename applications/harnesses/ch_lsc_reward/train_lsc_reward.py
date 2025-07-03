@@ -22,6 +22,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from yoke.models.hybridCNNmodules import hybrid2vectorCNN
 from yoke.datasets.lsc_dataset import LSC_hfield_reward_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.restart import continuation_setup
 from yoke.utils.dataload import make_distributed_dataloader
 from yoke.utils.checkpointing import load_model_and_optimizer
 from yoke.utils.checkpointing import save_model_and_optimizer
@@ -350,7 +351,7 @@ def main(
         #############################################
         FINISHED_TRAINING = epochIDX + 1 > total_epochs
         if not FINISHED_TRAINING:
-            new_slurm_file = tr.continuation_setup(
+            new_slurm_file = continuation_setup(
                 new_chkpt_path, studyIDX, last_epoch=epochIDX
             )
             os.system(f"sbatch {new_slurm_file}")

@@ -22,6 +22,8 @@ import numpy as np
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.dataload import make_dataloader
+from yoke.utils.restart import continuation_setup
 from yoke.utils.parameters import count_torch_params
 from yoke.utils.parallel import LodeRunner_DataParallel
 from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
@@ -301,14 +303,14 @@ if __name__ == "__main__":
         print("Datasets initialized...")
 
         # Setup Dataloaders
-        train_dataloader = tr.make_dataloader(
+        train_dataloader = make_dataloader(
             train_dataset,
             batch_size,
             train_batches,
             num_workers=num_workers,
             prefetch_factor=prefetch_factor
         )
-        val_dataloader = tr.make_dataloader(
+        val_dataloader = make_dataloader(
             val_dataset,
             batch_size,
             val_batches,
@@ -370,7 +372,7 @@ if __name__ == "__main__":
     #############################################
     FINISHED_TRAINING = epochIDX + 1 > total_epochs
     if not FINISHED_TRAINING:
-        new_slurm_file = tr.continuation_setup(
+        new_slurm_file = continuation_setup(
             new_h5_path, studyIDX, last_epoch=epochIDX
         )
         os.system(f"sbatch {new_slurm_file}")
