@@ -21,6 +21,8 @@ import torch.nn as nn
 from yoke.models.surrogateCNNmodules import tCNNsurrogate
 from yoke.datasets.lsc_dataset import LSC_cntr2rho_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.checkpointing import load_model_and_optimizer_hdf5
+from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
 from yoke.helpers import cli
 
 
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     # Load Model for Continuation
     #############################################
     if CONTINUATION:
-        starting_epoch = tr.load_model_and_optimizer_hdf5(model, optimizer, checkpoint)
+        starting_epoch = load_model_and_optimizer_hdf5(model, optimizer, checkpoint)
         print("Model state loaded for continuation.")
     else:
         starting_epoch = 0
@@ -256,7 +258,7 @@ if __name__ == "__main__":
     # Save model and optimizer state in hdf5
     h5_name_str = "study{0:03d}_modelState_epoch{1:04d}.hdf5"
     new_h5_path = os.path.join("./", h5_name_str.format(studyIDX, epochIDX))
-    tr.save_model_and_optimizer_hdf5(
+    save_model_and_optimizer_hdf5(
         compiled_model, optimizer, epochIDX, new_h5_path, compiled=True
     )
 

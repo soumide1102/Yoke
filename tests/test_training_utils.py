@@ -11,8 +11,8 @@ from tempfile import TemporaryDirectory
 import h5py
 from collections.abc import Generator
 from yoke.utils.parameters import count_torch_params
-from yoke.torch_training_utils import save_model_and_optimizer_hdf5
-from yoke.torch_training_utils import load_model_and_optimizer_hdf5
+from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
+from yoke.utils.checkpointing import load_model_and_optimizer_hdf5
 from yoke.torch_training_utils import make_dataloader
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR

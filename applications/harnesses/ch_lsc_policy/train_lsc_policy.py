@@ -11,6 +11,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from yoke.models.policyCNNmodules import gaussian_policyCNN
 from yoke.datasets.lsc_dataset import LSC_hfield_policy_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.checkpointing import load_model_and_optimizer
+from yoke.utils.checkpointing import save_model_and_optimizer
 from yoke.lr_schedulers import CosineWithWarmupScheduler
 from yoke.helpers import cli
 
@@ -167,7 +169,7 @@ def main(
     # Wait to move model to GPU until after the checkpoint load. Then
     # explicitly move model and optimizer state to GPU.
     if CONTINUATION:
-        model, starting_epoch = tr.load_model_and_optimizer(
+        model, starting_epoch = load_model_and_optimizer(
             checkpoint,
             optimizer,
             available_models,
@@ -310,7 +312,7 @@ def main(
     chkpt_name_str = "study{0:03d}_modelState_epoch{1:04d}.pth"
     new_chkpt_path = os.path.join("./", chkpt_name_str.format(studyIDX, epochIDX))
 
-    tr.save_model_and_optimizer(
+    save_model_and_optimizer(
         model,
         optimizer,
         epochIDX,
