@@ -12,6 +12,7 @@ import torch.nn as nn
 from yoke.models.CNNmodules import PVI_SingleField_CNN
 from yoke.datasets.nestedcyl_dataset import PVI_SingleField_DataSet
 import yoke.torch_training_utils as tr
+from yoke.utils.training.epoch.scalar_output import train_scalar_epoch
 from yoke.utils.dataload import make_dataloader
 from yoke.utils.restart import continuation_setup
 from yoke.utils.checkpointing import save_model_and_optimizer_hdf5
@@ -278,7 +279,7 @@ if __name__ == "__main__":
         )
 
         # Train an Epoch
-        tr.train_scalar_csv_epoch(
+        train_scalar_epoch(
             training_data=train_dataloader,
             validation_data=val_dataloader,
             model=model,

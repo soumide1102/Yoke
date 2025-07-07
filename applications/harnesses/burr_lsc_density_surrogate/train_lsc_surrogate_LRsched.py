@@ -20,7 +20,7 @@ import torch.nn as nn
 
 from yoke.models.surrogateCNNmodules import tCNNsurrogate
 from yoke.datasets.lsc_dataset import LSC_cntr2rho_DataSet
-import yoke.torch_training_utils as tr
+from yoke.utils.training.epoch.array_output import train_array_epoch
 from yoke.utils.dataload import make_dataloader
 from yoke.utils.restart import continuation_setup
 from yoke.utils.checkpointing import load_model_and_optimizer_hdf5
@@ -223,7 +223,7 @@ if __name__ == "__main__":
         startTime = time.time()
 
         # Train an Epoch
-        tr.train_array_csv_epoch(
+        train_array_epoch(
             training_data=train_dataloader,
             validation_data=val_dataloader,
             model=compiled_model,

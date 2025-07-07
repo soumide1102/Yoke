@@ -24,7 +24,7 @@ def train_scalar_datastep(
     Returns:
         truth (torch.Tensor): ground truth tensor
         pred (torch.Tensor): predicted tensor
-        loss (torch.Tensor): evaluated loss for the data sample
+        loss (torch.Tensor): per-sample evaluated loss for the data batch
 
     """
     # Set model to train
