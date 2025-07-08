@@ -141,36 +141,42 @@ def main(
     print("Number of System CPUs:", os.cpu_count())
     print("Number of CPUs per GPU:", os.environ["SLURM_JOB_CPUS_PER_NODE"])
 
+    print("Before available_models=")
     # Dictionary of available models.
     available_models = {
         "hybrid2vectorCNN": hybrid2vectorCNN
     }
+    print("After available_models=")
     
     #############################################
     # Model arguments
     #############################################
+    print("Before model_args=")
     model_args = {
         "img_size": (1, 1120, 800),
         "input_vector_size": 28,
         "output_dim": 1,
         "features": 12,
-        "depth": 12,
+        "depth": 4,
         "kernel": 3,
         "img_embed_dim": 32,
         "vector_embed_dim": 32,
-        "size_reduce_threshold": (8, 8),
-        "vector_feature_list": (32, 32, 64, 64),
-        "output_feature_list": (64, 128, 128, 64),
+        "size_reduce_threshold": (28, 28),
+        "vector_feature_list": (4, 4, 4, 4),
+        "output_feature_list": (4, 4, 4, 4),
         "act_layer": nn.GELU,
         "norm_layer": nn.LayerNorm
         }
+    print("After model_args=")
 
+    print("Before model=")
     model = hybrid2vectorCNN(**model_args)
+    print("After model=")
 
     #############################################
     # Initialize optimizer
     #############################################
-    loss_fn = nn.MSELoss(reduction="none")
+    print("Before optimizer=")
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=1e-6,
@@ -178,12 +184,16 @@ def main(
         eps=1e-08,
         weight_decay=0.01
     )
+    print("After optimizer=")
+
     print("Model initialized.")
 
     #############################################
     # Initialize Loss
     #############################################
+    print("Before loss_fn=")
     loss_fn = nn.MSELoss(reduction="none")
+    print("After loss_fn=")
     
     #############################################
     # Load Model for Continuation (Rank 0 only)
@@ -199,13 +209,17 @@ def main(
         )
         print("Model state loaded for continuation.")
     else:
+        print("Start model to device")
         model.to(device)
         starting_epoch = 0
+        print("End model to device")
 
     #############################################
     # Move Model to DistributedDataParallel
     #############################################
+    print("Start Move Model to DistributedDataParallel")
     model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+    print("End Move Model to DistributedDataParallel")
 
     #############################################
     # Learning Rate Scheduler
@@ -225,6 +239,7 @@ def main(
     # For single node
     ddp_anchor_lr = anchor_lr
 
+    print("Start LRsched=")
     LRsched = CosineWithWarmupScheduler(
         optimizer,
         anchor_lr=ddp_anchor_lr,
@@ -234,6 +249,7 @@ def main(
         min_fraction=min_fraction,
         last_epoch=last_epoch,
     )
+    print("End LRsched=")
 
     #############################################
     # Data Initialization (Distributed Dataloader)
