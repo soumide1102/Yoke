@@ -337,7 +337,8 @@ def make_distributed_dataloader(
         shuffle,
         num_workers,
         rank,
-        world_size
+        world_size,
+        #collate_fn=None,
     ) -> torch.utils.data.DataLoader:
     """Creates a DataLoader with a DistributedSampler.
 
@@ -369,7 +370,8 @@ def make_distributed_dataloader(
         drop_last=True,  # Ensures uniform batch size
         num_workers=num_workers,
         pin_memory=pin_memory,
-        prefetch_factor=2
+        prefetch_factor=2,
+        #collate_fn=collate_fn
     )
 
 
@@ -823,6 +825,7 @@ def train_DDP_loderunner_datastep(
     rank: int,
     world_size: int,
 ):
+
     """A DDP-compatible training step for multi-input, multi-output data.
 
         Args:
@@ -833,16 +836,42 @@ def train_DDP_loderunner_datastep(
         device (torch.device): device index to select
         rank (int): Rank of device
         world_size (int): Number of total DDP processes
-
     """
-    # Set model to train mode
-    model.train()
+#def train_DDP_loderunner_datastep(
+#    start_imgs: tuple[torch.Tensor],
+#    cm1s: tuple[list],
+#    end_imgs: tuple[torch.Tensor],
+#    cm2s: tuple[list],
+#    dts: tuple[torch.Tensor],
+#    model,
+#    optimizer,
+#    loss_fn,
+#    device: torch.device,
+#    rank: int,
+#    world_size: int,
+#):
+#    """
+#    Perform one DDP training step from unpacked batch components.
+#    """
+#    # Convert lists of tensors into batched tensors
+#    start_img = torch.stack(start_imgs).to(device, non_blocking=True)
+#    end_img = torch.stack(end_imgs).to(device, non_blocking=True)
+#    Dt = torch.stack(dts).to(device, non_blocking=True)
 
     # Extract data
-    start_img, end_img, Dt = data
+    ##start_img, end_img, Dt = data
+    # SOUMI added
+    #print("data_type =", type(data))
+    print("data = ", data)
+    start_img, channel_map, end_img, channel_map, Dt = data
+    #print("In train_DDP_loderunner_datastep: channel_map =", channel_map)
+    
     start_img = start_img.to(device, non_blocking=True)
     Dt = Dt.to(device, non_blocking=True)
     end_img = end_img.to(device, non_blocking=True)
+
+    # Set model to train mode
+    model.train()
 
     # Fixed input and output variable indices
     in_vars = torch.tensor([0, 1, 2, 3, 4, 5, 6, 7]).to(device, non_blocking=True)
@@ -1926,8 +1955,15 @@ def train_DDP_loderunner_epoch(
     # Training loop
     model.train()
     train_rcrd_filename = train_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
+    # SOUMI added
+    print("training_data =", training_data)
+    sample = next(iter(training_data))
+    print(f"[DEBUG] idx {0}: {[type(s) for s in sample]} {[s.shape for s in sample if isinstance(s, torch.Tensor)]}")
     with open(train_rcrd_filename, "a") if rank == 0 else nullcontext() as train_rcrd_file:
         for trainbatch_ID, traindata in enumerate(training_data):
+            # SOUMI added
+        #    print("traindata_type =", type(traindata))
+        #    print("traindata = ", traindata)
             # Stop when number of training batches is reached
             if trainbatch_ID >= num_train_batches:
                 break
@@ -1936,6 +1972,15 @@ def train_DDP_loderunner_epoch(
             truth, pred, train_losses = train_DDP_loderunner_datastep(
                 traindata, model, optimizer, loss_fn, device, rank, world_size
             )
+
+        #for trainbatch_ID, batch in enumerate(training_data):
+        #    # Unpack the list-of-lists into separate lists
+        #    start_imgs, cm1s, end_imgs, cm2s, dts = zip(*batch)
+
+        #    truth, pred, train_losses = train_DDP_loderunner_datastep(
+        #        start_imgs, cm1s, end_imgs, cm2s, dts,
+        #        model, optimizer, loss_fn, device, rank, world_size
+        #    )
 
             # Increment the learning-rate scheduler
             LRsched.step()
