@@ -4,10 +4,8 @@ import os
 
 
 def continuation_setup(
-        checkpointpath: str,
-        studyIDX: int,
-        last_epoch: int,
-        submissionType: str = 'slurm') -> str:
+    checkpointpath: str, studyIDX: int, last_epoch: int, submissionType: str = "slurm"
+) -> str:
     """Modify template submission files for training restart.
 
     Function to generate the training.input and training.slurm files for
@@ -42,7 +40,7 @@ def continuation_setup(
         f.write(new_training_input_data)
 
     # Choose job-scheduling system
-    if submissionType.lower() == 'slurm':
+    if submissionType.lower() == "slurm":
         training_slurm_tmpl = "./training_slurm.tmpl"
 
         with open(training_slurm_tmpl) as f:
@@ -62,7 +60,7 @@ def continuation_setup(
         with open(os.path.join("./", new_training_filepath), "w") as f:
             f.write(new_training_slurm_data)
 
-    if submissionType.lower() == 'flux':
+    if submissionType.lower() == "flux":
         training_flux_tmpl = "./training_flux.tmpl"
 
         with open(training_flux_tmpl) as f:
@@ -82,7 +80,7 @@ def continuation_setup(
         with open(os.path.join("./", new_training_filepath), "w") as f:
             f.write(new_training_flux_data)
 
-    elif submissionType.lower() == 'shell':
+    elif submissionType.lower() == "shell":
         training_shell_tmpl = "./training_shell.tmpl"
 
         with open(training_shell_tmpl) as f:

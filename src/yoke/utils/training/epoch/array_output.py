@@ -51,11 +51,13 @@ def train_array_epoch(
             )
 
             # Save batch records to the training record file
-            batch_records = np.column_stack([
-                np.full(len(train_losses), epochIDX),
-                np.full(len(train_losses), trainbatch_ID),
-                train_losses.detach().cpu().numpy().flatten()
-            ])
+            batch_records = np.column_stack(
+                [
+                    np.full(len(train_losses), epochIDX),
+                    np.full(len(train_losses), trainbatch_ID),
+                    train_losses.detach().cpu().numpy().flatten(),
+                ]
+            )
             np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Evaluate on all validation samples
@@ -71,9 +73,11 @@ def train_array_epoch(
                     )
 
                     # Save validation batch records
-                    batch_records = np.column_stack([
-                        np.full(len(val_losses), epochIDX),
-                        np.full(len(val_losses), valbatch_ID),
-                        val_losses.detach().cpu().numpy().flatten()
-                    ])
+                    batch_records = np.column_stack(
+                        [
+                            np.full(len(val_losses), epochIDX),
+                            np.full(len(val_losses), valbatch_ID),
+                            val_losses.detach().cpu().numpy().flatten(),
+                        ]
+                    )
                     np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")

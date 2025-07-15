@@ -16,7 +16,7 @@ def save_model_and_optimizer_hdf5(
     optimizer: torch.optim.Optimizer,
     epoch: int,
     filepath: str,
-    compiled: bool = False
+    compiled: bool = False,
 ) -> None:
     """Saves the state of a model and optimizer in portable hdf5 format.
 
@@ -82,9 +82,7 @@ def save_model_and_optimizer_hdf5(
 
 
 def load_model_and_optimizer_hdf5(
-    model: torch.nn.Module,
-    optimizer: torch.optim.Optimizer,
-    filepath: str
+    model: torch.nn.Module, optimizer: torch.optim.Optimizer, filepath: str
 ) -> int:
     """Loads state of model and optimizer stored in an hdf5 format.
 
@@ -165,7 +163,7 @@ def save_model_and_optimizer(
     epoch: int,
     filepath: str,
     model_class: type,
-    model_args: dict
+    model_args: dict,
 ) -> None:
     """Class-aware torch checkpointing.
 
@@ -212,11 +210,11 @@ def save_model_and_optimizer(
                     state[key] = value.to("cpu")
 
         checkpoint = {
-            'epoch': epoch,
-            'model_class': model_class.__name__,  # Store model class as a string
-            'model_args': model_args,  # Store model init arguments
-            'model_state_dict': model_cpu.state_dict(),
-            'optimizer_state_dict': optimizer_cpu
+            "epoch": epoch,
+            "model_class": model_class.__name__,  # Store model class as a string
+            "model_args": model_args,  # Store model init arguments
+            "model_state_dict": model_cpu.state_dict(),
+            "optimizer_state_dict": optimizer_cpu,
         }
 
         torch.save(checkpoint, filepath)
@@ -231,7 +229,7 @@ def load_model_and_optimizer(
     filepath: str,
     optimizer: torch.optim.Optimizer,
     available_models: dict,
-    device: str = "cuda"
+    device: str = "cuda",
 ) -> tuple[torch.nn.Module, int]:
     """Dynamically load model & optimizer state from checkpoint.
 
@@ -259,9 +257,9 @@ def load_model_and_optimizer(
     checkpoint = None
 
     if load_rank == 0:
-        checkpoint = torch.load(filepath, map_location='cpu', weights_only=False)
-        epochIDX = checkpoint['epoch']
-        print(f'[Rank {load_rank}] Loaded checkpoint from epoch {epochIDX}')
+        checkpoint = torch.load(filepath, map_location="cpu", weights_only=False)
+        epochIDX = checkpoint["epoch"]
+        print(f"[Rank {load_rank}] Loaded checkpoint from epoch {epochIDX}")
 
     # If in DDP, broadcast checkpoint to all ranks
     if dist.is_initialized():
@@ -270,20 +268,21 @@ def load_model_and_optimizer(
         checkpoint = checkpoint_list[0]  # Unpack checkpoint on all ranks
 
     # Retrieve model class and arguments
-    model_class_name = checkpoint['model_class']
-    model_args = checkpoint['model_args']
+    model_class_name = checkpoint["model_class"]
+    model_args = checkpoint["model_args"]
 
     # Ensure model class exists
     if model_class_name not in available_models:
-        raise ValueError(f"Unknown model class: {model_class_name}. "
-                         "Add it to `available_models`.")
+        raise ValueError(
+            f"Unknown model class: {model_class_name}. Add it to `available_models`."
+        )
 
     # Dynamically create the model
     model = available_models[model_class_name](**model_args)
 
     # Load state
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     # Move model to GPU if necessary
     model.to(device)
@@ -292,4 +291,4 @@ def load_model_and_optimizer(
     if dist.is_initialized():
         dist.barrier()
 
-    return model, checkpoint['epoch']
+    return model, checkpoint["epoch"]

@@ -11,13 +11,13 @@ import random
 
 
 def train_loderunner_datastep(
-        data: tuple,
-        model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        loss_fn: torch.nn.Module,
-        device: torch.device,
-        channel_map: list[int]
-        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    data: tuple,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    loss_fn: torch.nn.Module,
+    device: torch.device,
+    channel_map: list[int],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """A training step for which the data is of multi-input, multi-output type.
 
     This is currently a proto-type function to get the LodeRunner architecture
@@ -96,7 +96,7 @@ def train_scheduled_loderunner_datastep(
     optimizer: torch.optim.Optimizer,
     loss_fn: torch.nn.Module,
     device: torch.device,
-    scheduled_prob: float
+    scheduled_prob: float,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Trainning step for LodeRunner with scheduled sampling.
 
@@ -246,12 +246,12 @@ def train_DDP_loderunner_datastep(
 # Evaluating on a Datastep
 ####################################
 def eval_loderunner_datastep(
-        data: tuple,
-        model: torch.nn.Module,
-        loss_fn: torch.nn.Module,
-        device: torch.device,
-        channel_map: list[int]
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    data: tuple,
+    model: torch.nn.Module,
+    loss_fn: torch.nn.Module,
+    device: torch.device,
+    channel_map: list[int],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """An evaluation step for which the data is of multi-input, multi-output type.
 
     This is currently a proto-type function to get the LodeRunner architecture
@@ -320,13 +320,13 @@ def eval_loderunner_datastep(
 
 
 def eval_scheduled_loderunner_datastep(
-        data: tuple,
-        model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        loss_fn: torch.nn.Module,
-        device: torch.device,
-        scheduled_prob: float
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    data: tuple,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    loss_fn: torch.nn.Module,
+    device: torch.device,
+    scheduled_prob: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Evaluation step for LodeRunner with scheduled sampling.
 
     Args:

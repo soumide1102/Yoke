@@ -12,7 +12,7 @@ def train_array_datastep(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     loss_fn: nn.Module,
-    device: torch.device
+    device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Training step for network whose output is a CxHxW array.
 
@@ -55,10 +55,7 @@ def train_array_datastep(
 
 
 def eval_array_datastep(
-    data: tuple,
-    model: nn.Module,
-    loss_fn: nn.Module,
-    device: torch.device
+    data: tuple, model: nn.Module, loss_fn: nn.Module, device: torch.device
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Evaluation on a single batch of a network whose output is a CxHxW array.
 

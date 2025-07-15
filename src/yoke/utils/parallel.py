@@ -20,6 +20,7 @@ class LodeRunner_DataParallel(nn.DataParallel):
     explicitly.
 
     """
+
     def __init__(self, model: nn.Module) -> None:
         """Get it initialized using parent."""
         super().__init__(model)
@@ -41,19 +42,16 @@ class LodeRunner_DataParallel(nn.DataParallel):
             inputs_split = nn.parallel.scatter((image_input, Dt_input), self.device_ids)
 
             # Replicate non-batchsize-dependent inputs
-            in_vars_replicas = [
-                in_vars.to(device) for device in self.device_ids
-            ]
+            in_vars_replicas = [in_vars.to(device) for device in self.device_ids]
 
-            out_vars_replicas = [
-                out_vars.to(device) for device in self.device_ids
-            ]
+            out_vars_replicas = [out_vars.to(device) for device in self.device_ids]
 
             # Combine splits and replicas
             inputs_combined = [
                 (split_inputs[0], in_vars, out_vars, split_inputs[1])
-                for split_inputs, in_vars, out_vars
-                in zip(inputs_split, in_vars_replicas, out_vars_replicas)
+                for split_inputs, in_vars, out_vars in zip(
+                    inputs_split, in_vars_replicas, out_vars_replicas
+                )
             ]
 
             # Forward pass with replicas and custom splits

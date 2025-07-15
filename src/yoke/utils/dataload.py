@@ -6,13 +6,13 @@ from torch.utils.data.distributed import DistributedSampler
 
 
 def make_distributed_dataloader(
-        dataset: torch.utils.data.Dataset,
-        batch_size: int,
-        shuffle: bool,
-        num_workers: int,
-        rank: int,
-        world_size: int
-    ) -> DataLoader:
+    dataset: torch.utils.data.Dataset,
+    batch_size: int,
+    shuffle: bool,
+    num_workers: int,
+    rank: int,
+    world_size: int,
+) -> DataLoader:
     """Creates a DataLoader with a DistributedSampler.
 
     Args:
@@ -32,7 +32,7 @@ def make_distributed_dataloader(
         num_replicas=world_size,
         rank=rank,
         shuffle=shuffle,
-        )
+    )
 
     pin_memory = True if torch.cuda.is_available() else False
 
@@ -43,7 +43,7 @@ def make_distributed_dataloader(
         drop_last=True,  # Ensures uniform batch size
         num_workers=num_workers,
         pin_memory=pin_memory,
-        prefetch_factor=2
+        prefetch_factor=2,
     )
 
 

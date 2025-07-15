@@ -7,11 +7,12 @@ import torch
 
 
 def train_scalar_datastep(
-        data: tuple,
-        model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        loss_fn: torch.nn.Module,
-        device: torch.device) -> tuple:
+    data: tuple,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    loss_fn: torch.nn.Module,
+    device: torch.device,
+) -> tuple:
     """Training step for network whose output is a scalar.
 
     Args:
@@ -51,10 +52,7 @@ def train_scalar_datastep(
 
 
 def eval_scalar_datastep(
-    data: tuple,
-    model: torch.nn.Module,
-    loss_fn: torch.nn.Module,
-    device: torch.device
+    data: tuple, model: torch.nn.Module, loss_fn: torch.nn.Module, device: torch.device
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Evaluation on a single batch of a network whose output is a scalar.
 

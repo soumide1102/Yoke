@@ -78,11 +78,13 @@ def train_lsc_reward_epoch(
 
             # Save training record (rank 0 only)
             if rank == 0:
-                batch_records = np.column_stack([
-                    np.full(len(train_losses), epochIDX),
-                    np.full(len(train_losses), trainbatch_ID),
-                    train_losses.cpu().numpy().flatten()
-                ])
+                batch_records = np.column_stack(
+                    [
+                        np.full(len(train_losses), epochIDX),
+                        np.full(len(train_losses), trainbatch_ID),
+                        train_losses.cpu().numpy().flatten(),
+                    ]
+                )
                 np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Validation loop
@@ -100,14 +102,21 @@ def train_lsc_reward_epoch(
                         break
 
                     reward_true, pred_mean, val_losses = eval_lsc_reward_datastep(
-                        valdata, model, loss_fn, device, rank, world_size,
+                        valdata,
+                        model,
+                        loss_fn,
+                        device,
+                        rank,
+                        world_size,
                     )
 
                     # Save validation record (rank 0 only)
                     if rank == 0:
-                        batch_records = np.column_stack([
-                            np.full(len(val_losses), epochIDX),
-                            np.full(len(val_losses), valbatch_ID),
-                            val_losses.cpu().numpy().flatten()
-                        ])
+                        batch_records = np.column_stack(
+                            [
+                                np.full(len(val_losses), epochIDX),
+                                np.full(len(val_losses), valbatch_ID),
+                                val_losses.cpu().numpy().flatten(),
+                            ]
+                        )
                         np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")

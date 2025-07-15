@@ -71,26 +71,30 @@ def train_simple_loderunner_epoch(
             if verbose:
                 endTime = time.time()
                 batch_time = endTime - startTime
-                print(f"Batch {trainbatch_ID} time (seconds): {batch_time:.5f}",
-                      flush=True)
+                print(
+                    f"Batch {trainbatch_ID} time (seconds): {batch_time:.5f}", flush=True
+                )
 
             if verbose:
                 startTime = time.time()
 
             # Stack loss record and write using numpy
-            batch_records = np.column_stack([
-                np.full(train_batchsize, epochIDX),
-                np.full(train_batchsize, trainbatch_ID),
-                train_loss.detach().cpu().numpy().flatten()
-            ])
+            batch_records = np.column_stack(
+                [
+                    np.full(train_batchsize, epochIDX),
+                    np.full(train_batchsize, trainbatch_ID),
+                    train_loss.detach().cpu().numpy().flatten(),
+                ]
+            )
 
             np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
             if verbose:
                 endTime = time.time()
                 record_time = endTime - startTime
-                print(f"Batch {trainbatch_ID} record time: {record_time:.5f}",
-                      flush=True)
+                print(
+                    f"Batch {trainbatch_ID} record time: {record_time:.5f}", flush=True
+                )
 
     # Evaluate on all validation samples
     if epochIDX % train_per_val == 0:
@@ -105,11 +109,13 @@ def train_simple_loderunner_epoch(
                     )
 
                     # Stack loss record and write using numpy
-                    batch_records = np.column_stack([
-                        np.full(val_batchsize, epochIDX),
-                        np.full(val_batchsize, valbatch_ID),
-                        val_loss.detach().cpu().numpy().flatten()
-                    ])
+                    batch_records = np.column_stack(
+                        [
+                            np.full(val_batchsize, epochIDX),
+                            np.full(val_batchsize, valbatch_ID),
+                            val_loss.detach().cpu().numpy().flatten(),
+                        ]
+                    )
 
                     np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
@@ -168,18 +174,20 @@ def train_scheduled_loderunner_epoch(
                 optimizer=optimizer,
                 loss_fn=loss_fn,
                 device=device,
-                scheduled_prob=scheduled_prob
+                scheduled_prob=scheduled_prob,
             )
 
             # Increment the learning-rate scheduler
             LRsched.step()
 
             # Save batch records to the training record file
-            batch_records = np.column_stack([
-                np.full(len(train_losses), epochIDX),
-                np.full(len(train_losses), trainbatch_ID),
-                train_losses.detach().cpu().numpy().flatten()
-            ])
+            batch_records = np.column_stack(
+                [
+                    np.full(len(train_losses), epochIDX),
+                    np.full(len(train_losses), trainbatch_ID),
+                    train_losses.detach().cpu().numpy().flatten(),
+                ]
+            )
             np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Evaluate on all validation samples
@@ -196,15 +204,17 @@ def train_scheduled_loderunner_epoch(
                         optimizer=optimizer,
                         loss_fn=loss_fn,
                         device=device,
-                        scheduled_prob=scheduled_prob
+                        scheduled_prob=scheduled_prob,
                     )
 
                     # Save validation batch records
-                    batch_records = np.column_stack([
-                        np.full(len(val_losses), epochIDX),
-                        np.full(len(val_losses), valbatch_ID),
-                        val_losses.detach().cpu().numpy().flatten()
-                    ])
+                    batch_records = np.column_stack(
+                        [
+                            np.full(len(val_losses), epochIDX),
+                            np.full(len(val_losses), valbatch_ID),
+                            val_losses.detach().cpu().numpy().flatten(),
+                        ]
+                    )
                     np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Return the updated scheduled probability
@@ -271,26 +281,30 @@ def train_LRsched_loderunner_epoch(
             if verbose:
                 endTime = time.time()
                 batch_time = endTime - startTime
-                print(f"Batch {trainbatch_ID} time (seconds): {batch_time:.5f}",
-                      flush=True)
+                print(
+                    f"Batch {trainbatch_ID} time (seconds): {batch_time:.5f}", flush=True
+                )
 
             if verbose:
                 startTime = time.time()
 
             # Stack loss record and write using numpy
-            batch_records = np.column_stack([
-                np.full(train_batchsize, epochIDX),
-                np.full(train_batchsize, trainbatch_ID),
-                train_loss.detach().cpu().numpy().flatten()
-            ])
+            batch_records = np.column_stack(
+                [
+                    np.full(train_batchsize, epochIDX),
+                    np.full(train_batchsize, trainbatch_ID),
+                    train_loss.detach().cpu().numpy().flatten(),
+                ]
+            )
 
             np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
             if verbose:
                 endTime = time.time()
                 record_time = endTime - startTime
-                print(f"Batch {trainbatch_ID} record time: {record_time:.5f}",
-                      flush=True)
+                print(
+                    f"Batch {trainbatch_ID} record time: {record_time:.5f}", flush=True
+                )
 
     # Evaluate on all validation samples
     if epochIDX % train_per_val == 0:
@@ -305,11 +319,13 @@ def train_LRsched_loderunner_epoch(
                     )
 
                     # Stack loss record and write using numpy
-                    batch_records = np.column_stack([
-                        np.full(val_batchsize, epochIDX),
-                        np.full(val_batchsize, valbatch_ID),
-                        val_loss.detach().cpu().numpy().flatten()
-                    ])
+                    batch_records = np.column_stack(
+                        [
+                            np.full(val_batchsize, epochIDX),
+                            np.full(val_batchsize, valbatch_ID),
+                            val_loss.detach().cpu().numpy().flatten(),
+                        ]
+                    )
 
                     np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
@@ -381,11 +397,13 @@ def train_DDP_loderunner_epoch(
 
             # Save training record (rank 0 only)
             if rank == 0:
-                batch_records = np.column_stack([
-                    np.full(len(train_losses), epochIDX),
-                    np.full(len(train_losses), trainbatch_ID),
-                    train_losses.cpu().numpy().flatten()
-                ])
+                batch_records = np.column_stack(
+                    [
+                        np.full(len(train_losses), epochIDX),
+                        np.full(len(train_losses), trainbatch_ID),
+                        train_losses.cpu().numpy().flatten(),
+                    ]
+                )
                 np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Validation loop
@@ -403,14 +421,21 @@ def train_DDP_loderunner_epoch(
                         break
 
                     end_img, pred_img, val_losses = eval_DDP_loderunner_datastep(
-                        valdata, model, loss_fn, device, rank, world_size,
+                        valdata,
+                        model,
+                        loss_fn,
+                        device,
+                        rank,
+                        world_size,
                     )
 
                     # Save validation record (rank 0 only)
                     if rank == 0:
-                        batch_records = np.column_stack([
-                            np.full(len(val_losses), epochIDX),
-                            np.full(len(val_losses), valbatch_ID),
-                            val_losses.cpu().numpy().flatten()
-                        ])
+                        batch_records = np.column_stack(
+                            [
+                                np.full(len(val_losses), epochIDX),
+                                np.full(len(val_losses), valbatch_ID),
+                                val_losses.cpu().numpy().flatten(),
+                            ]
+                        )
                         np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
