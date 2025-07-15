@@ -1,5 +1,11 @@
 """Tests for LodeRunner epoch training utilities."""
 
+import pytest
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Detected call of.*lr_scheduler.step.*:UserWarning"
+)
+
 import os
 from pathlib import Path
 
@@ -8,7 +14,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import pytest
 from pytest import MonkeyPatch
 
 import yoke.utils.training.epoch.loderunner as epoch_mod
