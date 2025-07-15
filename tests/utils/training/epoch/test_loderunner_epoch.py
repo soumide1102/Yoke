@@ -1,4 +1,6 @@
 """Tests for LodeRunner epoch training utilities."""
+# ruff: noqa: E402
+# Due to pytest warnings needing to be filtered prior to other imports.
 
 import pytest
 
@@ -9,7 +11,6 @@ pytestmark = pytest.mark.filterwarnings(
 import os
 from pathlib import Path
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
