@@ -42,9 +42,7 @@ def test_csv2scalar_returns_correct_value(tmp_path: Path) -> None:
     csv_file = tmp_path / "design.csv"
     design.to_csv(csv_file)
 
-    value = nc_loader.csv2scalar(
-        str(csv_file), "nc231213_S1_id0002", "ptw_scale"
-    )
+    value = nc_loader.csv2scalar(str(csv_file), "nc231213_S1_id0002", "ptw_scale")
     assert isinstance(value, float)
     assert value == 1.5
 

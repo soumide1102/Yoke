@@ -24,8 +24,7 @@ def test_generateSingleRowSlurm_empty_for_none() -> None:
     assert row == ""
 
 
-def test_default_generate_slurm(tmp_path: Path,
-                               monkeypatch: pytest.MonkeyPatch) -> None:
+def test_default_generate_slurm(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test generateSlurm uses template defaults when no overrides are set."""
     # Point loader to look in our tmp_path for the "templates" folder
     dummy = tmp_path / "dummy.py"
@@ -69,8 +68,7 @@ def test_default_generate_slurm(tmp_path: Path,
     assert "#SBATCH --time=00:10:00\n" in out
 
 
-def test_full_generate_slurm(tmp_path: Path,
-                             monkeypatch: pytest.MonkeyPatch) -> None:
+def test_full_generate_slurm(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test generateSlurm applies run-config, email, verbose, and custom overrides."""
     # Monkeypatch module __file__
     dummy = tmp_path / "dummy.py"
