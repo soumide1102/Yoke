@@ -27,7 +27,7 @@ def train_simple_loderunner_epoch(
     train_rcrd_filename: str,
     val_rcrd_filename: str,
     device: torch.device,
-    verbose: bool=False,
+    verbose: bool = False,
 ) -> None:
     """Training and validation epochs on the LodeRunner architecture.
 
@@ -224,7 +224,7 @@ def train_LRsched_loderunner_epoch(
     train_rcrd_filename: str,
     val_rcrd_filename: str,
     device: torch.device,
-    verbose: bool=False,
+    verbose: bool = False,
 ) -> None:
     """Training and validation epoch on LodeRunner with LR-scheduler.
 
@@ -414,4 +414,3 @@ def train_DDP_loderunner_epoch(
                             val_losses.cpu().numpy().flatten()
                         ])
                         np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
-

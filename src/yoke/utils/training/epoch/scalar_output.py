@@ -9,6 +9,7 @@ from yoke.utils.training.datastep.scalar_output import (
     eval_scalar_datastep,
 )
 
+
 def train_scalar_epoch(
     training_data: torch.utils.data.DataLoader,
     validation_data: torch.utils.data.DataLoader,
@@ -50,8 +51,7 @@ def train_scalar_epoch(
                 traindata, model, optimizer, loss_fn, device
             )
 
-            # Save the training loss to the CSV file
-                        # Save batch records to the training record file
+            # Save batch records to the training record file
             batch_records = np.column_stack([
                 np.full(len(train_losses), epochIDX),
                 np.full(len(train_losses), trainbatch_ID),
@@ -78,4 +78,3 @@ def train_scalar_epoch(
                         val_losses.detach().cpu().numpy().flatten()
                     ])
                     np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
-

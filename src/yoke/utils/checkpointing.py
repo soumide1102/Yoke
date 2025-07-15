@@ -235,7 +235,7 @@ def load_model_and_optimizer(
 ) -> tuple[torch.nn.Module, int]:
     """Dynamically load model & optimizer state from checkpoint.
 
-    NOTE: This function only works while loading checkpoints created by 
+    NOTE: This function only works while loading checkpoints created by
     `save_model_and_optimizer`
 
     - Working for both DDP and non-DDP training.

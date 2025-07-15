@@ -7,6 +7,7 @@ possible training methods are provided.
 
 import torch
 import torch.distributed as dist
+import random
 
 
 def train_loderunner_datastep(
@@ -26,7 +27,7 @@ def train_loderunner_datastep(
         data (tuple): tuple of model input, corresponding ground truth, and lead time
         model (torch.nn.Module): model to train
         optimizer (torch.optim.Optimizer): optimizer for training set
-        loss_fn (Callable): loss function for training set
+        loss_fn (torch.nn.Module): loss function for training set
         device (torch.device): device index to select
         channel_map (list): list of channel indices to use
 
@@ -454,5 +455,3 @@ def eval_DDP_loderunner_datastep(
     torch.cuda.empty_cache()
 
     return end_img, pred_img, all_losses
-
-
