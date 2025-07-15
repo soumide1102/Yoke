@@ -80,13 +80,6 @@ def train_loderunner_datastep(
     loss.mean().backward()
     optimizer.step()
 
-    # Delete created tensors to free memory
-    del in_vars
-    del out_vars
-
-    # Clear GPU memory after each deallocation
-    torch.cuda.empty_cache()
-
     return end_img, pred_img, per_sample_loss
 
 
@@ -165,13 +158,6 @@ def train_scheduled_loderunner_datastep(
     loss.mean().backward()
     optimizer.step()
 
-    # Delete created tensors to free memory
-    del in_vars
-    del out_vars
-
-    # Clear GPU memory after each deallocation
-    torch.cuda.empty_cache()
-
     return img_seq[:, 1:], pred_seq, per_sample_loss
 
 
@@ -234,10 +220,6 @@ def train_DDP_loderunner_datastep(
         all_losses = torch.cat(gathered_losses, dim=0)  # Shape: (total_batch_size,)
     else:
         all_losses = None
-
-    # Free memory
-    del in_vars, out_vars
-    torch.cuda.empty_cache()
 
     return end_img, pred_img, all_losses
 
@@ -309,13 +291,6 @@ def eval_loderunner_datastep(
     loss = loss_fn(pred_img, end_img)
     per_sample_loss = loss.mean(dim=[1, 2, 3])  # Shape: (batch_size,)
 
-    # Delete created tensors to free memory
-    del in_vars
-    del out_vars
-
-    # Clear GPU memory after each deallocation
-    torch.cuda.empty_cache()
-
     return end_img, pred_img, per_sample_loss
 
 
@@ -386,13 +361,6 @@ def eval_scheduled_loderunner_datastep(
     loss = loss_fn(pred_seq, img_seq[:, 1:])
     per_sample_loss = loss.mean(dim=[1, 2, 3, 4])  # Shape: (batch_size,)
 
-    # Delete created tensors to free memory
-    del in_vars
-    del out_vars
-
-    # Clear GPU memory after each deallocation
-    torch.cuda.empty_cache()
-
     return img_seq[:, 1:], pred_seq, per_sample_loss
 
 
@@ -449,9 +417,5 @@ def eval_DDP_loderunner_datastep(
         all_losses = torch.cat(gathered_losses, dim=0)  # Shape: (total_batch_size,)
     else:
         all_losses = None
-
-    # Free memory
-    del in_vars, out_vars
-    torch.cuda.empty_cache()
 
     return end_img, pred_img, all_losses
