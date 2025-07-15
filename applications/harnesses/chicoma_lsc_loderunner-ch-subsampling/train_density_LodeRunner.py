@@ -21,7 +21,7 @@ import numpy as np
 
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
-import yoke.torch_training_utils as tr
+from yoke.utils.training.epoch import train_LRsched_loderunner_epoch
 from yoke.utils.dataload import make_dataloader
 from yoke.utils.restart import continuation_setup
 from yoke.utils.parameters import count_torch_params
@@ -323,7 +323,7 @@ if __name__ == "__main__":
         startTime = time.time()
 
         # Train an Epoch
-        tr.train_LRsched_loderunner_epoch(
+        train_LRsched_loderunner_epoch(
             channel_map,
             training_data=train_dataloader,
             validation_data=val_dataloader,

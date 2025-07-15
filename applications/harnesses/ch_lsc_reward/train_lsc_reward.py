@@ -13,7 +13,6 @@ Includes learning rate scheduling and support for normalized inputs.
 import os
 import time
 import argparse
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.distributed as dist
@@ -21,13 +20,13 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yoke.models.hybridCNNmodules import hybrid2vectorCNN
 from yoke.datasets.lsc_dataset import LSC_hfield_reward_DataSet
-import yoke.torch_training_utils as tr
+from yoke.utils.training.epoch import train_lsc_reward_epoch
 from yoke.utils.restart import continuation_setup
 from yoke.utils.dataload import make_distributed_dataloader
 from yoke.utils.checkpointing import load_model_and_optimizer
 from yoke.utils.checkpointing import save_model_and_optimizer
 from yoke.lr_schedulers import CosineWithWarmupScheduler
-from yoke.helpers import cli  # Assuming this exists
+from yoke.helpers import cli
 
 #############################################
 # Inputs
@@ -300,7 +299,7 @@ def main(
             startTime = time.time()
 
         # Train and Validate
-        tr.train_lsc_reward_epoch(
+        train_lsc_reward_epoch(
             training_data=train_dataloader,
             validation_data=val_dataloader,
             num_train_batches=train_batches,

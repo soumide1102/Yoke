@@ -9,7 +9,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yoke.models.vit.swin.bomberman import LodeRunner
 from yoke.datasets.lsc_dataset import LSC_rho2rho_temporal_DataSet
-import yoke.torch_training_utils as tr
+from yoke.utils.training.epoch.loderunner import train_DDP_loderunner_epoch
 from yoke.utils.restart import continuation_setup
 from yoke.utils.dataload import make_distributed_dataloader
 from yoke.utils.checkpointing import load_model_and_optimizer
@@ -282,7 +282,7 @@ def main(args, rank, world_size, local_rank, device):
             startTime = time.time()
 
         # Train and Validate
-        tr.train_DDP_loderunner_epoch(
+        train_DDP_loderunner_epoch(
             training_data=train_dataloader,
             validation_data=val_dataloader,
             num_train_batches=train_batches,
