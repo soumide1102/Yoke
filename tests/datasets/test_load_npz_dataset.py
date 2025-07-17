@@ -1,4 +1,4 @@
-"""Unit tests for the *lsc_dataset* classes.
+"""Unit tests for the *load_npz_dataset* classes.
 
 We use the *mock* submodule of *unittest* to allow fake files, directories, and
 data for testing. This avoids a lot of costly sample file storage.
@@ -16,6 +16,44 @@ from yoke.datasets.load_npz_dataset import (
     LabeledData,
     TemporalDataSet,
 )
+
+from yoke.datasets import load_npz_dataset as mod
+
+
+def test_read_npz_nan_replaces_nans(tmp_path: pathlib.Path) -> None:
+    """read_npz_nan replaces NaNs in loaded array with zeros."""
+    # Create array with NaNs
+    arr = np.array([[np.nan, 1.0], [2.0, np.nan]], dtype=float)
+    fn = tmp_path / "sample.npz"
+    np.savez(fn, data=arr)
+    # Load and apply
+    npz = np.load(fn)
+    out = mod.read_npz_nan(npz, "data")
+    npz.close()
+    # Expect zeros in place of NaNs
+    expected = np.array([[0.0, 1.0], [2.0, 0.0]], dtype=float)
+    assert isinstance(out, np.ndarray)
+    np.testing.assert_array_equal(out, expected)
+
+
+def test_read_npz_nan_leaves_non_nan(tmp_path: pathlib.Path) -> None:
+    """read_npz_nan leaves non-NaN values unchanged."""
+    arr = np.array([[3.14, -5.0], [0.0, 7.2]], dtype=float)
+    fn = tmp_path / "clean.npz"
+    np.savez(fn, vals=arr)
+    with np.load(fn) as npz:
+        out = mod.read_npz_nan(npz, "vals")
+    np.testing.assert_array_equal(out, arr)
+
+
+def test_read_npz_nan_missing_field_raises(tmp_path: pathlib.Path) -> None:
+    """read_npz_nan raises KeyError when requested field is not present."""
+    arr = np.array([1.0, 2.0], dtype=float)
+    fn = tmp_path / "other.npz"
+    np.savez(fn, other=arr)
+    with np.load(fn) as npz:
+        with pytest.raises(KeyError):
+            _ = mod.read_npz_nan(npz, "missing")
 
 
 # Mock np.load to simulate loading .npz files
@@ -440,3 +478,73 @@ def test_temporal_dataset_getitem_returns_expected(
     # dt = 0.25*(1-0) == 0.25
     assert isinstance(dt, torch.Tensor)
     assert dt.item() == pytest.approx(0.25)
+
+
+def test_has_density_prefix_true_and_false() -> None:
+    """has_density_prefix should detect the 'density_' prefix correctly."""
+    assert mod.has_density_prefix("density_steel")
+    assert not mod.has_density_prefix("steel_density")
+    assert not mod.has_density_prefix("density")
+
+
+def test_extract_after_density_suffix_and_empty() -> None:
+    """extract_after_density returns suffix or empty string when no suffix."""
+    # typical suffix
+    assert mod.extract_after_density("density_steel") == "steel"
+    # no suffix after underscore returns empty string
+    assert mod.extract_after_density("density_") == ""
+    # non-matching prefix returns None
+    assert mod.extract_after_density("den_steel") is None
+    assert mod.extract_after_density("") is None
+
+
+def test_meshgrid_position_Rcoord(monkeypatch) -> None:
+    """meshgrid_position should meshgrid properly when hfield == 'Rcoord'."""
+    base = np.array([1, 2])
+    zcoord = np.array([10, 20, 30])
+    # patch read_npz_nan to return zcoord for "Zcoord"
+    monkeypatch.setattr(
+        mod,
+        "read_npz_nan",
+        lambda fn, hf: zcoord if hf == "Zcoord" else None,
+    )
+    out = mod.meshgrid_position(base, "file.npz", "Rcoord")
+    expected, _ = np.meshgrid(base, zcoord)
+    assert np.array_equal(out, expected)
+
+
+def test_meshgrid_position_Zcoord(monkeypatch) -> None:
+    """meshgrid_position should meshgrid properly when hfield == 'Zcoord'."""
+    base = np.array([5, 6, 7])
+    rcoord = np.array([100, 200])
+    monkeypatch.setattr(
+        mod,
+        "read_npz_nan",
+        lambda fn, hf: rcoord if hf == "Rcoord" else None,
+    )
+    out = mod.meshgrid_position(base, "file.npz", "Zcoord")
+    _, expected = np.meshgrid(rcoord, base)
+    assert np.array_equal(out, expected)
+
+
+def test_meshgrid_position_other() -> None:
+    """meshgrid_position should return the input unchanged for other hfields."""
+    arr = np.arange(4).reshape(2, 2)
+    out = mod.meshgrid_position(arr, "file.npz", "Uvelocity")
+    # must be the identical array object
+    assert out is arr
+
+
+def test_volfrac_density_no_prefix() -> None:
+    """volfrac_density should leave tmp_img unchanged if no 'density_' prefix."""
+    img = np.full((2, 2), 3.14)
+    out = mod.volfrac_density(img, "file.npz", "Uvelocity")
+    assert out is img
+
+
+def test_volfrac_density_empty_suffix(capsys) -> None:
+    """volfrac_density prints a warning and returns img when suffix is empty."""
+    img = np.array([[7]])
+    # call with hfield = "density_" → empty suffix
+    out = mod.volfrac_density(img, "file.npz", "density_")
+    captured = capsys
