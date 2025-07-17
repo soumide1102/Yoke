@@ -20,6 +20,58 @@ from yoke.datasets.load_npz_dataset import (
 from yoke.datasets import load_npz_dataset as mod
 
 
+@pytest.mark.parametrize(
+    "hfield",
+    [
+        "generic",       # no special behavior
+        "Rcoord",        # meshgrid branch
+        "density_xxx",   # volfrac branch
+    ],
+)
+def test_import_img_from_npz_chaining(
+    monkeypatch: pytest.MonkeyPatch,
+    hfield: str,
+) -> None:
+    """Ensure import_img_from_npz calls read, meshgrid_position, then volfrac."""
+    calls: list[tuple] = []
+
+    # Base image returned by read_npz_nan
+    base = np.array([[1.0]])
+
+    def fake_read(arg1: str, arg2: str) -> np.ndarray:
+        """Stub for read_npz_nan."""
+        calls.append(("read", arg1, arg2))
+        return base.copy()
+
+    def fake_mesh(img: np.ndarray, fn: str, hf: str) -> np.ndarray:
+        """Stub for meshgrid_position."""
+        calls.append(("mesh", img.tolist(), fn, hf))
+        # e.g. add 10 so we can detect it
+        return img + 10.0
+
+    def fake_vol(img: np.ndarray, fn: str, hf: str) -> np.ndarray:
+        """Stub for volfrac_density."""
+        calls.append(("vol", img.tolist(), fn, hf))
+        # multiply by 2 so final is (base+10)*2
+        return img * 2.0
+
+    monkeypatch.setattr(mod, "read_npz_nan", fake_read)
+    monkeypatch.setattr(mod, "meshgrid_position", fake_mesh)
+    monkeypatch.setattr(mod, "volfrac_density", fake_vol)
+
+    out = mod.import_img_from_npz("myfile.npz", hfield)
+
+    # final should be (1 + 10)*2 = 22
+    assert out == pytest.approx(np.array([[22.0]]))
+
+    # the three helpers must be called in this exact order
+    assert calls == [
+        ("read", "myfile.npz", hfield),
+        ("mesh", base.tolist(), "myfile.npz", hfield),
+        ("vol", (base + 10.0).tolist(), "myfile.npz", hfield),
+    ]
+
+
 def test_read_npz_nan_replaces_nans(tmp_path: pathlib.Path) -> None:
     """read_npz_nan replaces NaNs in loaded array with zeros."""
     # Create array with NaNs
@@ -498,6 +550,21 @@ def test_extract_after_density_suffix_and_empty() -> None:
     assert mod.extract_after_density("") is None
 
 
+def test_volfrac_density_empty_suffix_prints(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """volfrac_density prints warning and returns original when suffix empty."""
+    img = np.ones((2, 2))
+    # Force has_density_prefix to True and extract_after_density to empty
+    monkeypatch.setattr(mod, "has_density_prefix", lambda s: True)
+    monkeypatch.setattr(mod, "extract_after_density", lambda s: "")
+    out = mod.volfrac_density(img, "dummy.npz", "density_")
+    captured = capsys.readouterr()
+    assert "Could not extractsuffix from hfield" in captured.out
+    np.testing.assert_array_equal(out, img)
+
+
 def test_meshgrid_position_Rcoord(monkeypatch) -> None:
     """meshgrid_position should meshgrid properly when hfield == 'Rcoord'."""
     base = np.array([1, 2])
@@ -542,9 +609,33 @@ def test_volfrac_density_no_prefix() -> None:
     assert out is img
 
 
-def test_volfrac_density_empty_suffix(capsys) -> None:
-    """volfrac_density prints a warning and returns img when suffix is empty."""
-    img = np.array([[7]])
-    # call with hfield = "density_" → empty suffix
-    out = mod.volfrac_density(img, "file.npz", "density_")
-    captured = capsys
+def test_volfrac_density_builds_vofm_name_and_multiplies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """volfrac_density should form 'vofm_<suffix>' and multiply tmp_img by it."""
+    # 1) force the density prefix branch
+    monkeypatch.setattr(mod, "has_density_prefix", lambda s: True)
+    # 2) produce a known suffix
+    monkeypatch.setattr(mod, "extract_after_density", lambda s: "mat")
+    # 3) stub read_npz_nan to record its inputs and return a small array
+    calls: dict[str, str] = {}
+    def fake_read(fname: str, fld: str) -> np.ndarray:
+        calls["fname"] = fname
+        calls["fld"] = fld
+        # return a 1×2 volume‐fraction array
+        return np.array([[2.0, 3.0]])
+    monkeypatch.setattr(mod, "read_npz_nan", fake_read)
+
+    # 4) prepare a matching tmp_img
+    tmp_img = np.array([[4.0, 5.0]])
+
+    # 5) call under test
+    out = mod.volfrac_density(tmp_img, "path/to/data.npz", "density_mat")
+
+    # verify read_npz_nan was called with the correct vofm_<suffix>
+    assert calls["fname"] == "path/to/data.npz"
+    assert calls["fld"] == "vofm_mat"
+
+    # verify elementwise multiplication: [4,5] * [2,3] => [8,15]
+    expected = np.array([[8.0, 15.0]])
+    np.testing.assert_array_equal(out, expected)
