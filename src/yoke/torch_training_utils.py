@@ -2443,21 +2443,28 @@ def train_lsc_reward_epoch(
     valbatch_ID = 0
 
     # Training loop
+    print("In train_lsc_reward_epoch: START model.train()")
     model.train()
+    print("In train_lsc_reward_epoch: END model.train()")
     train_rcrd_filename = train_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
+    print("In train_lsc_reward_epoch: END model.train_rcrd_filename")
     with open(train_rcrd_filename, "a") if rank == 0 else nullcontext() as train_rcrd_file:
         for trainbatch_ID, traindata in enumerate(training_data):
             # Stop when number of training batches is reached
             if trainbatch_ID >= num_train_batches:
+                print("In train_lsc_reward_epoch: END trainbatch_ID >= num_train_batches")
                 break
 
+            # SOUMI: started commenting
             # Perform a single training step
             reward_true, pred_mean, train_losses = train_lsc_reward_datastep(
                 traindata, model, optimizer, loss_fn, device, rank, world_size
             )
+            print("In train_lsc_reward_epoch: END train_lsc_reward_datastep called.")
 
             # Increment the learning-rate scheduler
             LRsched.step()
+            print("In train_lsc_reward_epoch: END LRsched called")
 
             # Save training record (rank 0 only)
             if rank == 0:
@@ -2466,6 +2473,7 @@ def train_lsc_reward_epoch(
                     np.full(len(train_losses), trainbatch_ID),
                     train_losses.cpu().numpy().flatten()
                 ])
+                print("In train_lsc_reward_epoch: END stacked up losses")
                 np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Validation loop
