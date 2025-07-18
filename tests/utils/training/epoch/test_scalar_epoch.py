@@ -28,6 +28,7 @@ def test_train_only(
     Returns:
         None: None.
     """
+
     # Dummy train step returns two losses per batch.
     def dummy_train_scalar_datastep(
         data: list,
@@ -120,6 +121,7 @@ def test_train_and_validate(
     Returns:
         None: None.
     """
+
     # Dummy train step returns two losses per batch.
     def dummy_train_scalar_datastep(
         data: list,

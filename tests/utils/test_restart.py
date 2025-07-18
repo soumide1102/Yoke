@@ -71,9 +71,7 @@ def test_flux_continuation_setup(
     """
     monkeypatch.chdir(tmp_path)
     (tmp_path / "training_input.tmpl").write_text("in <CHECKPOINT>")
-    (tmp_path / "training_flux.tmpl").write_text(
-        "launch <INPUTFILE> epoch <epochIDX>"
-    )
+    (tmp_path / "training_flux.tmpl").write_text("launch <INPUTFILE> epoch <epochIDX>")
 
     checkpoint = "chk.pt"
     study_idx = 1
@@ -112,9 +110,7 @@ def test_shell_continuation_setup_case_insensitive(
     """
     monkeypatch.chdir(tmp_path)
     (tmp_path / "training_input.tmpl").write_text("run <CHECKPOINT>")
-    (tmp_path / "training_shell.tmpl").write_text(
-        "bash <INPUTFILE> resume <epochIDX>"
-    )
+    (tmp_path / "training_shell.tmpl").write_text("bash <INPUTFILE> resume <epochIDX>")
 
     checkpoint = "resume.ckpt"
     study_idx = 3

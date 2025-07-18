@@ -23,9 +23,9 @@ from yoke.datasets import load_npz_dataset as mod
 @pytest.mark.parametrize(
     "hfield",
     [
-        "generic",       # no special behavior
-        "Rcoord",        # meshgrid branch
-        "density_xxx",   # volfrac branch
+        "generic",  # no special behavior
+        "Rcoord",  # meshgrid branch
+        "density_xxx",  # volfrac branch
     ],
 )
 def test_import_img_from_npz_chaining(
@@ -625,6 +625,7 @@ def test_volfrac_density_builds_vofm_name_and_multiplies(
         calls["fld"] = fld
         # return a 1×2 volume‐fraction array
         return np.array([[2.0, 3.0]])
+
     monkeypatch.setattr(mod, "read_npz_nan", fake_read)
 
     # 4) prepare a matching tmp_img

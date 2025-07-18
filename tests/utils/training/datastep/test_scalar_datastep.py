@@ -69,9 +69,7 @@ def test_train_scalar_datastep_shapes_and_training_mode() -> None:
     # Snapshot initial weights
     initial_weight = model.linear.weight.clone().detach()
 
-    truth, pred, loss = train_scalar_datastep(
-        data, model, optimizer, loss_fn, device
-    )
+    truth, pred, loss = train_scalar_datastep(data, model, optimizer, loss_fn, device)
 
     # Model should be in training mode
     assert model.training, "Expected model.training == True after train step"
@@ -91,9 +89,9 @@ def test_train_scalar_datastep_shapes_and_training_mode() -> None:
 
     # Confirm that model weights were updated by optimizer.step()
     updated_weight = model.linear.weight.clone().detach()
-    assert not torch.allclose(
-        initial_weight, updated_weight
-    ), "Weights should change after training step"
+    assert not torch.allclose(initial_weight, updated_weight), (
+        "Weights should change after training step"
+    )
 
 
 def test_eval_scalar_datastep_shapes_and_eval_mode() -> None:

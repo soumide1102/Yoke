@@ -80,12 +80,8 @@ def test_train_simple_loderunner_epoch(
     # Patch the imported datastep functions
     fake_train = DummyEpochStep()
     fake_eval = DummyEpochStep()
-    monkeypatch.setattr(
-        epoch_mod, "train_loderunner_datastep", fake_train
-    )
-    monkeypatch.setattr(
-        epoch_mod, "eval_loderunner_datastep", fake_eval
-    )
+    monkeypatch.setattr(epoch_mod, "train_loderunner_datastep", fake_train)
+    monkeypatch.setattr(epoch_mod, "eval_loderunner_datastep", fake_eval)
 
     # Filenames with placeholder
     train_file = str(tmp_path / "train_<epochIDX>.csv")
@@ -134,12 +130,8 @@ def test_train_scheduled_loderunner_epoch(
 
     fake_train = DummyEpochStep()
     fake_eval = DummyEpochStep()
-    monkeypatch.setattr(
-        epoch_mod, "train_scheduled_loderunner_datastep", fake_train
-    )
-    monkeypatch.setattr(
-        epoch_mod, "eval_scheduled_loderunner_datastep", fake_eval
-    )
+    monkeypatch.setattr(epoch_mod, "train_scheduled_loderunner_datastep", fake_train)
+    monkeypatch.setattr(epoch_mod, "eval_scheduled_loderunner_datastep", fake_eval)
 
     # Filenames
     tf = str(tmp_path / "train_<epochIDX>.csv")
@@ -184,12 +176,8 @@ def test_train_LRsched_loderunner_epoch(
 
     fake_train = DummyEpochStep()
     fake_eval = DummyEpochStep()
-    monkeypatch.setattr(
-        epoch_mod, "train_loderunner_datastep", fake_train
-    )
-    monkeypatch.setattr(
-        epoch_mod, "eval_loderunner_datastep", fake_eval
-    )
+    monkeypatch.setattr(epoch_mod, "train_loderunner_datastep", fake_train)
+    monkeypatch.setattr(epoch_mod, "eval_loderunner_datastep", fake_eval)
 
     tf = str(tmp_path / "train_<epochIDX>.csv")
     vf = str(tmp_path / "val_<epochIDX>.csv")
@@ -228,12 +216,8 @@ def test_train_DDP_loderunner_epoch(
 
     fake_ddp_train = DummyEpochStep()
     fake_ddp_eval = DummyEpochStep()
-    monkeypatch.setattr(
-        epoch_mod, "train_DDP_loderunner_datastep", fake_ddp_train
-    )
-    monkeypatch.setattr(
-        epoch_mod, "eval_DDP_loderunner_datastep", fake_ddp_eval
-    )
+    monkeypatch.setattr(epoch_mod, "train_DDP_loderunner_datastep", fake_ddp_train)
+    monkeypatch.setattr(epoch_mod, "eval_DDP_loderunner_datastep", fake_ddp_eval)
 
     tf = str(tmp_path / "train_<epochIDX>.csv")
     vf = str(tmp_path / "val_<epochIDX>.csv")

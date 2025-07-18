@@ -128,6 +128,7 @@ def test_getitem_success_sequence(tmp_path: Path) -> None:
         def integers(self, low: int, high: int) -> int:
             """Return a fixed start index of 0."""
             return 0
+
     ds.rng = FakeRNG()
 
     img_seq, dt, ch_map = ds[0]
@@ -165,6 +166,7 @@ def test_half_image_false_reflect(tmp_path: Path) -> None:
         def integers(self, low: int, high: int) -> int:
             """Return a fixed start index of 0."""
             return 0
+
     ds.rng = FakeRNG()
 
     img_seq, dt, ch_map = ds[0]

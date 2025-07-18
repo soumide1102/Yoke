@@ -22,14 +22,14 @@ def test_train_and_validation_loops_run_for_rank0(
 
     """
     training_data = [1, 2, 3]
-    validation_data = ['a', 'b', 'c']
+    validation_data = ["a", "b", "c"]
     num_train_batches = 2
     num_val_batches = 2
     epoch_idx = 2
     train_per_val = 1
-    train_file_template = str(tmp_path / 'train_<epochIDX>.csv')
-    val_file_template = str(tmp_path / 'val_<epochIDX>.csv')
-    device = torch.device('cpu')
+    train_file_template = str(tmp_path / "train_<epochIDX>.csv")
+    val_file_template = str(tmp_path / "val_<epochIDX>.csv")
+    device = torch.device("cpu")
     rank = 0
     world_size = 1
 
@@ -40,7 +40,7 @@ def test_train_and_validation_loops_run_for_rank0(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> tuple[None, None, torch.Tensor]:
         return None, None, torch.tensor([0.123], device=dev)
 
@@ -50,32 +50,33 @@ def test_train_and_validation_loops_run_for_rank0(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> tuple[None, None, torch.Tensor]:
         return None, None, torch.tensor([0.456], device=dev)
 
     monkeypatch.setattr(
         lsc_policy_module,
-        'train_lsc_policy_datastep',
+        "train_lsc_policy_datastep",
         dummy_train_step,
     )
     monkeypatch.setattr(
         lsc_policy_module,
-        'eval_lsc_policy_datastep',
+        "eval_lsc_policy_datastep",
         dummy_eval_step,
     )
 
     class DummyModel(torch.nn.Module):
         """Minimal model stub tracking train/eval calls."""
+
         def __init__(self) -> None:
             super().__init__()
             self.mode = None
 
         def train(self) -> None:
-            self.mode = 'train'
+            self.mode = "train"
 
         def eval(self) -> None:
-            self.mode = 'eval'
+            self.mode = "eval"
 
     model = DummyModel()
     optimizer = object()
@@ -83,6 +84,7 @@ def test_train_and_validation_loops_run_for_rank0(
 
     class DummyScheduler:
         """Stub scheduler tracking number of step calls."""
+
         def __init__(self) -> None:
             self.step_count = 0
 
@@ -110,22 +112,22 @@ def test_train_and_validation_loops_run_for_rank0(
     )
 
     assert scheduler.step_count == num_train_batches
-    assert model.mode == 'eval'
+    assert model.mode == "eval"
 
-    train_path = tmp_path / f'train_{epoch_idx:04d}.csv'
+    train_path = tmp_path / f"train_{epoch_idx:04d}.csv"
     train_lines = train_path.read_text().splitlines()
     assert len(train_lines) == num_train_batches
-    assert train_lines[0].startswith(f'{epoch_idx}, 0, 0.12300000')
-    assert train_lines[1].startswith(f'{epoch_idx}, 1, 0.12300000')
+    assert train_lines[0].startswith(f"{epoch_idx}, 0, 0.12300000")
+    assert train_lines[1].startswith(f"{epoch_idx}, 1, 0.12300000")
 
     captured = capsys.readouterr()
-    assert f'Validating... {epoch_idx}' in captured.out
+    assert f"Validating... {epoch_idx}" in captured.out
 
-    val_path = tmp_path / f'val_{epoch_idx:04d}.csv'
+    val_path = tmp_path / f"val_{epoch_idx:04d}.csv"
     val_lines = val_path.read_text().splitlines()
     assert len(val_lines) == num_val_batches
-    assert val_lines[0].startswith(f'{epoch_idx}, 0, 0.45600000')
-    assert val_lines[1].startswith(f'{epoch_idx}, 1, 0.45600000')
+    assert val_lines[0].startswith(f"{epoch_idx}, 0, 0.45600000")
+    assert val_lines[1].startswith(f"{epoch_idx}, 1, 0.45600000")
 
 
 def test_validation_skipped_when_not_divisible(
@@ -147,9 +149,9 @@ def test_validation_skipped_when_not_divisible(
     num_val_batches = 1
     epoch_idx = 3
     train_per_val = 2
-    train_file_template = str(tmp_path / 'train_<epochIDX>.csv')
-    val_file_template = str(tmp_path / 'val_<epochIDX>.csv')
-    device = torch.device('cpu')
+    train_file_template = str(tmp_path / "train_<epochIDX>.csv")
+    val_file_template = str(tmp_path / "val_<epochIDX>.csv")
+    device = torch.device("cpu")
     rank = 0
     world_size = 1
 
@@ -160,24 +162,25 @@ def test_validation_skipped_when_not_divisible(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> tuple[None, None, torch.Tensor]:
         return None, None, torch.tensor([0.321], device=dev)
 
     monkeypatch.setattr(
         lsc_policy_module,
-        'train_lsc_policy_datastep',
+        "train_lsc_policy_datastep",
         dummy_train_step,
     )
 
     class DummyModel(torch.nn.Module):
         """Model stub tracking train calls."""
+
         def __init__(self) -> None:
             super().__init__()
             self.mode = None
 
         def train(self) -> None:
-            self.mode = 'train'
+            self.mode = "train"
 
     model = DummyModel()
     optimizer = object()
@@ -185,6 +188,7 @@ def test_validation_skipped_when_not_divisible(
 
     class DummyScheduler:
         """Stub scheduler."""
+
         def __init__(self) -> None:
             self.step_count = 0
 
@@ -212,17 +216,17 @@ def test_validation_skipped_when_not_divisible(
     )
 
     assert scheduler.step_count == 1
-    assert model.mode == 'train'
+    assert model.mode == "train"
 
-    train_path = tmp_path / f'train_{epoch_idx:04d}.csv'
+    train_path = tmp_path / f"train_{epoch_idx:04d}.csv"
     assert train_path.exists()
     train_lines = train_path.read_text().splitlines()
     assert len(train_lines) == 1
 
     captured = capsys.readouterr()
-    assert captured.out == ''
+    assert captured.out == ""
 
-    val_path = tmp_path / f'val_{epoch_idx:04d}.csv'
+    val_path = tmp_path / f"val_{epoch_idx:04d}.csv"
     assert not val_path.exists()
 
 
@@ -245,9 +249,9 @@ def test_no_files_created_for_nonzero_rank(
     num_val_batches = 1
     epoch_idx = 4
     train_per_val = 1
-    train_file_template = str(tmp_path / 'train_<epochIDX>.csv')
-    val_file_template = str(tmp_path / 'val_<epochIDX>.csv')
-    device = torch.device('cpu')
+    train_file_template = str(tmp_path / "train_<epochIDX>.csv")
+    val_file_template = str(tmp_path / "val_<epochIDX>.csv")
+    device = torch.device("cpu")
     rank = 1
     world_size = 2
 
@@ -258,7 +262,7 @@ def test_no_files_created_for_nonzero_rank(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> tuple[None, None, torch.Tensor]:
         """Dummy train step returning fixed tensor."""
         return None, None, torch.tensor([0.999], device=dev)
@@ -269,24 +273,25 @@ def test_no_files_created_for_nonzero_rank(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> tuple[None, None, torch.Tensor]:
         """Dummy eval step returning fixed tensor."""
         return None, None, torch.tensor([0.888], device=dev)
 
     monkeypatch.setattr(
         lsc_policy_module,
-        'train_lsc_policy_datastep',
+        "train_lsc_policy_datastep",
         dummy_train_step,
     )
     monkeypatch.setattr(
         lsc_policy_module,
-        'eval_lsc_policy_datastep',
+        "eval_lsc_policy_datastep",
         dummy_eval_step,
     )
 
     class DummyModel(torch.nn.Module):
         """Model stub ignoring train/eval calls."""
+
         def train(self) -> None:
             pass
 
@@ -299,6 +304,7 @@ def test_no_files_created_for_nonzero_rank(
 
     class DummyScheduler:
         """Stub scheduler tracking calls."""
+
         def __init__(self) -> None:
             self.step_count = 0
 
@@ -325,13 +331,13 @@ def test_no_files_created_for_nonzero_rank(
         world_size,
     )
 
-    train_path = tmp_path / f'train_{epoch_idx:04d}.csv'
-    val_path = tmp_path / f'val_{epoch_idx:04d}.csv'
+    train_path = tmp_path / f"train_{epoch_idx:04d}.csv"
+    val_path = tmp_path / f"val_{epoch_idx:04d}.csv"
     assert not train_path.exists()
     assert not val_path.exists()
 
     captured = capsys.readouterr()
-    assert f'Validating... {epoch_idx}' in captured.out
+    assert f"Validating... {epoch_idx}" in captured.out
 
 
 def test_zero_batches_creates_empty_files(
@@ -351,9 +357,9 @@ def test_zero_batches_creates_empty_files(
     num_val_batches = 0
     epoch_idx = 5
     train_per_val = 1
-    train_file_template = str(tmp_path / 'train_<epochIDX>.csv')
-    val_file_template = str(tmp_path / 'val_<epochIDX>.csv')
-    device = torch.device('cpu')
+    train_file_template = str(tmp_path / "train_<epochIDX>.csv")
+    val_file_template = str(tmp_path / "val_<epochIDX>.csv")
+    device = torch.device("cpu")
     rank = 0
     world_size = 1
 
@@ -364,9 +370,9 @@ def test_zero_batches_creates_empty_files(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> None:
-        pytest.fail('train_lsc_policy_datastep should not be called')
+        pytest.fail("train_lsc_policy_datastep should not be called")
 
     def dummy_eval_step(
         data: object,
@@ -374,23 +380,24 @@ def test_zero_batches_creates_empty_files(
         loss_fn: object,
         dev: torch.device,
         rnk: int,
-        ws: int
+        ws: int,
     ) -> None:
-        pytest.fail('eval_lsc_policy_datastep should not be called')
+        pytest.fail("eval_lsc_policy_datastep should not be called")
 
     monkeypatch.setattr(
         lsc_policy_module,
-        'train_lsc_policy_datastep',
+        "train_lsc_policy_datastep",
         dummy_train_step,
     )
     monkeypatch.setattr(
         lsc_policy_module,
-        'eval_lsc_policy_datastep',
+        "eval_lsc_policy_datastep",
         dummy_eval_step,
     )
 
     class DummyModel(torch.nn.Module):
         """Model stub ignoring train/eval calls."""
+
         def train(self) -> None:
             pass
 
@@ -403,8 +410,9 @@ def test_zero_batches_creates_empty_files(
 
     class DummyScheduler:
         """Stub scheduler that should not be stepped."""
+
         def step(self) -> None:
-            pytest.fail('Scheduler.step should not be called')
+            pytest.fail("Scheduler.step should not be called")
 
     scheduler = DummyScheduler()
 
@@ -426,8 +434,8 @@ def test_zero_batches_creates_empty_files(
         world_size,
     )
 
-    train_path = tmp_path / f'train_{epoch_idx:04d}.csv'
-    val_path = tmp_path / f'val_{epoch_idx:04d}.csv'
+    train_path = tmp_path / f"train_{epoch_idx:04d}.csv"
+    val_path = tmp_path / f"val_{epoch_idx:04d}.csv"
     assert train_path.exists()
     assert train_path.stat().st_size == 0
     assert val_path.exists()

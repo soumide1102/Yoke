@@ -26,7 +26,7 @@ def test_train_array_epoch_no_validation(
         model: object,
         optimizer: object,
         loss_fn: object,
-        device: torch.device
+        device: torch.device,
     ) -> tuple[None, None, torch.Tensor]:
         train_calls.append(databatch)
         return None, None, torch.tensor([0.1, 0.2])
@@ -34,11 +34,8 @@ def test_train_array_epoch_no_validation(
     monkeypatch.setattr(ao, "train_array_datastep", dummy_train)
     # Monkeypatch eval_array_datastep to ensure it's not called
     monkeypatch.setattr(
-        ao,
-        "eval_array_datastep",
-        lambda *args,
-        **kwargs: (None, None, torch.tensor([]))
-        )
+        ao, "eval_array_datastep", lambda *args, **kwargs: (None, None, torch.tensor([]))
+    )
 
     # Run with epochIDX that does not trigger validation
     model = object()
@@ -97,7 +94,7 @@ def test_train_array_epoch_with_validation(
         model: object,
         optimizer: object,
         loss_fn: object,
-        device: torch.device
+        device: torch.device,
     ) -> tuple[None, None, torch.Tensor]:
         train_batches.append(databatch)
         return None, None, torch.tensor([0.3])
@@ -108,10 +105,7 @@ def test_train_array_epoch_with_validation(
     val_batches = []
 
     def dummy_eval(
-        databatch: object,
-        model: object,
-        loss_fn: object,
-        device: torch.device
+        databatch: object, model: object, loss_fn: object, device: torch.device
     ) -> tuple[None, None, torch.Tensor]:
         val_batches.append(databatch)
         return None, None, torch.tensor([0.4, 0.5])

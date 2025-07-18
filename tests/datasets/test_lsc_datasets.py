@@ -498,9 +498,7 @@ def test_LSC_cntr2rho_dataset(tmp_path: Path) -> None:
     # filelist and design CSV
     fl = tmp_path / "files.txt"
     fl.write_text(file_name + "\n")
-    design = pd.DataFrame(
-        {"sa1": [0.1], "ct7": [0.2]}, index=["lsc240420_id00002"]
-    )
+    design = pd.DataFrame({"sa1": [0.1], "ct7": [0.2]}, index=["lsc240420_id00002"])
     design_file = tmp_path / "design.csv"
     design.to_csv(design_file)
 
@@ -549,9 +547,7 @@ def test_LSCnorm_cntr2rho_dataset(tmp_path: Path) -> None:
     # filelist and design CSV
     fl = tmp_path / "files2.txt"
     fl.write_text(fname + "\n")
-    design = pd.DataFrame(
-        {"sa1": [0.3], "ct7": [0.6]}, index=["lsc240420_id00003"]
-    )
+    design = pd.DataFrame({"sa1": [0.3], "ct7": [0.6]}, index=["lsc240420_id00003"])
     df_file = tmp_path / "design2.csv"
     design.to_csv(df_file)
 
@@ -581,6 +577,7 @@ def test_volfrac_density_variants(tmp_path: Path) -> None:
     # Case 3: valid density_foo
     # monkey-patch LSCread_npz_NaN to return a vof of 2.0
     import yoke.datasets.lsc_dataset as mod  # noqa: E402
+
     orig = mod.LSCread_npz_NaN
     mod.LSCread_npz_NaN = lambda npz, fld: np.full((2, 2), 2.0)
     out3 = volfrac_density(base, None, "density_bar")

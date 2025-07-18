@@ -34,10 +34,9 @@ class DummyModel(nn.Module):
         # ensure there's at least one parameter for the optimizer
         self.dummy_param = nn.Parameter(torch.tensor(1.0))
 
-    def forward(self,
-                state_y: torch.Tensor,
-                stateH: torch.Tensor,
-                targetH: torch.Tensor) -> DummyDistribution:
+    def forward(
+        self, state_y: torch.Tensor, stateH: torch.Tensor, targetH: torch.Tensor
+    ) -> DummyDistribution:
         """Forward that sums state_y, stateH, and targetH."""
         sum_tensor = state_y + stateH + targetH
         pred = sum_tensor + self.dummy_param
@@ -45,8 +44,7 @@ class DummyModel(nn.Module):
         return DummyDistribution(pred)
 
 
-def test_train_lsc_policy_datastep_single_rank(
-        monkeypatch: MonkeyPatch) -> None:
+def test_train_lsc_policy_datastep_single_rank(monkeypatch: MonkeyPatch) -> None:
     """Test train step with single rank and CPU device.
 
     Args:
@@ -60,15 +58,15 @@ def test_train_lsc_policy_datastep_single_rank(
     x_true = torch.ones(batch_size, feature_size) * 6
     data = (state_y, stateH, targetH, x_true)
 
-    monkeypatch.setattr(dist, 'all_gather',
-                        lambda outs, t: outs.__setitem__(0, t))
+    monkeypatch.setattr(dist, "all_gather", lambda outs, t: outs.__setitem__(0, t))
     model = DummyModel()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    loss_fn = nn.MSELoss(reduction='none')
-    device = torch.device('cpu')
+    loss_fn = nn.MSELoss(reduction="none")
+    device = torch.device("cpu")
 
     x_ret, pred_mean, all_losses = train_lsc_policy_datastep(
-        data, model, optimizer, loss_fn, device, rank=0, world_size=1)
+        data, model, optimizer, loss_fn, device, rank=0, world_size=1
+    )
 
     assert model.training is True
     assert torch.allclose(x_ret, x_true)
@@ -80,8 +78,7 @@ def test_train_lsc_policy_datastep_single_rank(
     assert torch.allclose(all_losses, torch.ones(batch_size))
 
 
-def test_eval_lsc_policy_datastep_single_rank(
-        monkeypatch: MonkeyPatch) -> None:
+def test_eval_lsc_policy_datastep_single_rank(monkeypatch: MonkeyPatch) -> None:
     """Test eval step with single rank and CPU device.
 
     Args:
@@ -95,14 +92,14 @@ def test_eval_lsc_policy_datastep_single_rank(
     x_true = torch.full((batch_size, feature_size), 9.0)
     data = (state_y, stateH, targetH, x_true)
 
-    monkeypatch.setattr(dist, 'all_gather',
-                        lambda outs, t: outs.__setitem__(0, t))
+    monkeypatch.setattr(dist, "all_gather", lambda outs, t: outs.__setitem__(0, t))
     model = DummyModel()
-    loss_fn = nn.MSELoss(reduction='none')
-    device = torch.device('cpu')
+    loss_fn = nn.MSELoss(reduction="none")
+    device = torch.device("cpu")
 
     x_ret, pred_mean, all_losses = eval_lsc_policy_datastep(
-        data, model, loss_fn, device, rank=0, world_size=1)
+        data, model, loss_fn, device, rank=0, world_size=1
+    )
 
     assert model.training is False
     assert torch.allclose(x_ret, x_true)
@@ -114,11 +111,10 @@ def test_eval_lsc_policy_datastep_single_rank(
     assert torch.allclose(all_losses, torch.ones(batch_size))
 
 
-@pytest.mark.parametrize('rank,world_size', [(0, 2), (1, 2)])
+@pytest.mark.parametrize("rank,world_size", [(0, 2), (1, 2)])
 def test_train_lsc_policy_datastep_multi_rank(
-        monkeypatch: MonkeyPatch,
-        rank: int,
-        world_size: int) -> None:
+    monkeypatch: MonkeyPatch, rank: int, world_size: int
+) -> None:
     """Test train step with multiple ranks.
 
     Args:
@@ -138,14 +134,15 @@ def test_train_lsc_policy_datastep_multi_rank(
         for i in range(len(outs)):
             outs[i] = t + i
 
-    monkeypatch.setattr(dist, 'all_gather', stub_all_gather)
+    monkeypatch.setattr(dist, "all_gather", stub_all_gather)
     model = DummyModel()
     optimizer = optim.Adam(model.parameters())
-    loss_fn = nn.MSELoss(reduction='none')
-    device = torch.device('cpu')
+    loss_fn = nn.MSELoss(reduction="none")
+    device = torch.device("cpu")
 
     x_ret, pred_mean_val, all_losses = train_lsc_policy_datastep(
-        data, model, optimizer, loss_fn, device, rank, world_size)
+        data, model, optimizer, loss_fn, device, rank, world_size
+    )
 
     assert torch.allclose(x_ret, x_true)
     # sum 1+0+0=1, plus dummy_param (1.0) => 2
@@ -155,19 +152,16 @@ def test_train_lsc_policy_datastep_multi_rank(
         assert all_losses.shape == (world_size * batch_size,)
         # per-sample loss before gather is (2-1)^2 = 1.0
         # stub_all_gather yields [ones, twos]
-        assert torch.equal(all_losses[:batch_size],
-                           torch.ones(batch_size))
-        assert torch.equal(all_losses[batch_size:],
-                           torch.full((batch_size,), 2.0))
+        assert torch.equal(all_losses[:batch_size], torch.ones(batch_size))
+        assert torch.equal(all_losses[batch_size:], torch.full((batch_size,), 2.0))
     else:
         assert all_losses is None
 
 
-@pytest.mark.parametrize('rank,world_size', [(0, 2), (1, 2)])
+@pytest.mark.parametrize("rank,world_size", [(0, 2), (1, 2)])
 def test_eval_lsc_policy_datastep_multi_rank(
-        monkeypatch: MonkeyPatch,
-        rank: int,
-        world_size: int) -> None:
+    monkeypatch: MonkeyPatch, rank: int, world_size: int
+) -> None:
     """Test eval step with multiple ranks.
 
     Args:
@@ -187,13 +181,14 @@ def test_eval_lsc_policy_datastep_multi_rank(
         for i in range(len(outs)):
             outs[i] = t * (i + 1)
 
-    monkeypatch.setattr(dist, 'all_gather', stub_all_gather)
+    monkeypatch.setattr(dist, "all_gather", stub_all_gather)
     model = DummyModel()
-    loss_fn = nn.MSELoss(reduction='none')
-    device = torch.device('cpu')
+    loss_fn = nn.MSELoss(reduction="none")
+    device = torch.device("cpu")
 
     x_ret, pred_mean_val, all_losses = eval_lsc_policy_datastep(
-        data, model, loss_fn, device, rank, world_size)
+        data, model, loss_fn, device, rank, world_size
+    )
     # sum 0+1+0=1, plus dummy_param (1.0) => 2
     expected_pm = torch.full((batch_size, feature_size), 2.0)
     assert torch.allclose(x_ret, x_true)
@@ -202,9 +197,7 @@ def test_eval_lsc_policy_datastep_multi_rank(
     if rank == 0:
         assert all_losses.shape == (world_size * batch_size,)
         # stub_all_gather yields [ones, twos]
-        expected_losses = torch.tensor(
-            [1.0] * batch_size + [2.0] * batch_size
-        )
+        expected_losses = torch.tensor([1.0] * batch_size + [2.0] * batch_size)
         assert torch.equal(all_losses, expected_losses)
     else:
         assert all_losses is None

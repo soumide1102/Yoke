@@ -47,9 +47,9 @@ class TestArrayDataStep:
         """Test that eval_array_datastep returns truth, pred, and per-sample loss."""
         device = torch.device("cpu")
         batch_size, c, h, w = 3, 2, 1, 1
-        inpt = torch.arange(
-            batch_size * c * h * w, dtype=torch.float32
-        ).reshape(batch_size, c, h, w)
+        inpt = torch.arange(batch_size * c * h * w, dtype=torch.float32).reshape(
+            batch_size, c, h, w
+        )
         truth = inpt.clone()
         model = nn.Identity()
         loss_fn = nn.MSELoss(reduction="none")
