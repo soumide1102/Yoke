@@ -29,7 +29,6 @@ from yoke.datasets.lsc_dataset import (
 )
 
 
-
 # Mock np.load to simulate loading .npz files
 class MockNpzFile:
     """Set up mock file load."""

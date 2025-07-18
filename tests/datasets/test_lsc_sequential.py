@@ -135,6 +135,3 @@ def test_getitem_valid_sequence(
     # Check dt is a scalar float tensor with value 0.25
     assert dt.shape == torch.Size([])
     assert float(dt) == 0.25
-
-
-

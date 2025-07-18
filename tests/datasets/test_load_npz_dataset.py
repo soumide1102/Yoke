@@ -619,6 +619,7 @@ def test_volfrac_density_builds_vofm_name_and_multiplies(
     monkeypatch.setattr(mod, "extract_after_density", lambda s: "mat")
     # 3) stub read_npz_nan to record its inputs and return a small array
     calls: dict[str, str] = {}
+
     def fake_read(fname: str, fld: str) -> np.ndarray:
         calls["fname"] = fname
         calls["fld"] = fld

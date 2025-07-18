@@ -123,8 +123,9 @@ def test_getitem_success_sequence(tmp_path: Path) -> None:
         half_image=True,
     )
     # Fix RNG so start_idx=0
+
     class FakeRNG:
-        def integers(self, low:int, high:int) -> int:
+        def integers(self, low: int, high: int) -> int:
             """Return a fixed start index of 0."""
             return 0
     ds.rng = FakeRNG()
@@ -161,7 +162,7 @@ def test_half_image_false_reflect(tmp_path: Path) -> None:
     )
 
     class FakeRNG:
-        def integers(self, low:int, high:int) -> int:
+        def integers(self, low: int, high: int) -> int:
             """Return a fixed start index of 0."""
             return 0
     ds.rng = FakeRNG()

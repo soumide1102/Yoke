@@ -181,4 +181,3 @@ def test_train_array_epoch_with_validation(
         assert int(epoch_str) == exp_epoch
         assert int(batch_str) == exp_batch
         assert float(loss_str) == pytest.approx(exp_loss)
-

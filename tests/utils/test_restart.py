@@ -49,7 +49,7 @@ def test_slurm_continuation_setup(
     slurm_text = slurm.read_text()
     assert "<CHECKPOINT>" not in inp_text and checkpoint in inp_text
     assert "<INPUTFILE>" not in slurm_text and expected_input in slurm_text
-    assert "<epochIDX>" not in slurm_text and f"{last_epoch+1:04d}" in slurm_text
+    assert "<epochIDX>" not in slurm_text and f"{last_epoch + 1:04d}" in slurm_text
 
 
 def test_flux_continuation_setup(
@@ -91,7 +91,7 @@ def test_flux_continuation_setup(
 
     flux_text = flux.read_text()
     assert expected_input in flux_text
-    assert f"{last_epoch+1:04d}" in flux_text
+    assert f"{last_epoch + 1:04d}" in flux_text
 
 
 def test_shell_continuation_setup_case_insensitive(
@@ -132,7 +132,7 @@ def test_shell_continuation_setup_case_insensitive(
 
     shell_text = shell.read_text()
     assert expected_input in shell_text
-    assert f"{last_epoch+1:04d}" in shell_text
+    assert f"{last_epoch + 1:04d}" in shell_text
 
 
 def test_default_submission_type(
