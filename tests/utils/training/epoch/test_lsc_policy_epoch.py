@@ -154,8 +154,14 @@ def test_validation_skipped_when_not_divisible(
     world_size = 1
 
     def dummy_train_step(
-        data, model, optimizer, loss_fn, dev, rnk, ws
-    ):
+        data: object,
+        model: torch.nn.Module,
+        optimizer: object,
+        loss_fn: object,
+        dev: torch.device,
+        rnk: int,
+        ws: int
+    ) -> tuple[None, None, torch.Tensor]:
         return None, None, torch.tensor([0.321], device=dev)
 
     monkeypatch.setattr(

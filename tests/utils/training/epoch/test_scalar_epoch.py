@@ -1,7 +1,6 @@
 """Test module for yoke.utils.training.epoch.scalar_output."""
 
 from pathlib import Path
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim

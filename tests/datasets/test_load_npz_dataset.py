@@ -565,7 +565,7 @@ def test_volfrac_density_empty_suffix_prints(
     np.testing.assert_array_equal(out, img)
 
 
-def test_meshgrid_position_Rcoord(monkeypatch) -> None:
+def test_meshgrid_position_Rcoord(monkeypatch: pytest.MonkeyPatch) -> None:
     """meshgrid_position should meshgrid properly when hfield == 'Rcoord'."""
     base = np.array([1, 2])
     zcoord = np.array([10, 20, 30])
@@ -580,7 +580,7 @@ def test_meshgrid_position_Rcoord(monkeypatch) -> None:
     assert np.array_equal(out, expected)
 
 
-def test_meshgrid_position_Zcoord(monkeypatch) -> None:
+def test_meshgrid_position_Zcoord(monkeypatch: pytest.MonkeyPatch) -> None:
     """meshgrid_position should meshgrid properly when hfield == 'Zcoord'."""
     base = np.array([5, 6, 7])
     rcoord = np.array([100, 200])

@@ -1,7 +1,5 @@
 """Tests for the sequential NPZ dataset function."""
 
-"""Unit tests for SequentialDataSet in yoke.datasets.load_npz_dataset."""
-
 from pathlib import Path
 import numpy as np
 import torch

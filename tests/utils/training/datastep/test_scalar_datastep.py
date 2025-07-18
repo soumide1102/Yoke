@@ -1,7 +1,6 @@
 """Tests for scalar-output datastep."""
 
 import torch
-import pytest
 
 from yoke.utils.training.datastep.scalar_output import (
     train_scalar_datastep,
