@@ -188,8 +188,16 @@ def main(args, rank, world_size, local_rank, device):
         )
         print("Model state loaded for continuation.")
     else:
-        model.to(device)
         starting_epoch = 0
+
+    # Ensure model is on the correct GPU before DDP wrap.
+    model.to(device)
+
+    # Move optimizer to GPU
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if isinstance(v, torch.Tensor):
+                state[k] = v.to(device)
 
     #############################################
     # Move Model to DistributedDataParallel
@@ -199,6 +207,7 @@ def main(args, rank, world_size, local_rank, device):
     #############################################
     # Learning Rate Scheduler
     #############################################
+    print("Starting epoch: ", starting_epoch)
     if starting_epoch == 0:
         last_epoch = -1
     else:
@@ -314,18 +323,34 @@ def main(args, rank, world_size, local_rank, device):
             print(f"Completed epoch {epochIDX}...", flush=True)
             print(f"Epoch time (minutes): {epoch_time:.2f}", flush=True)
 
-    # Save model and optimizer state in hdf5
-    chkpt_name_str = "study{0:03d}_modelState_epoch{1:04d}.pth"
-    new_chkpt_path = os.path.join("./", chkpt_name_str.format(studyIDX, epochIDX))
+    # Save model and optimizer on rank-0 only
+    if rank == 0:
+        chkpt_name_str = f'study{studyIDX:03d}_modelState_epoch{epochIDX:04d}.pth'
+        new_chkpt_path = os.path.join("./", chkpt_name_str)
 
-    save_model_and_optimizer(
-        model,
-        optimizer,
-        epochIDX,
-        new_chkpt_path,
-        model_class=LodeRunner,
-        model_args=model_args
-    )
+        # Make CPU copy so any rank/node can reload
+        model_to_save = (
+            model.module
+            if isinstance(model, torch.nn.parallel.DistributedDataParallel)
+            else model
+        ).to('cpu')
+
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to('cpu')
+
+        save_model_and_optimizer(
+            model_to_save,
+            optimizer,
+            epochIDX,
+            new_chkpt_path,
+            model_class=LodeRunner,
+            model_args=model_args,
+        )
+
+    # Wait until file is completely written
+    dist.barrier()
 
     if rank == 0:
         #############################################
