@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# This is a setup for GPU training on Venado. Find out how much
+# This is a setup for GPU training on Chicoma. Find out how much
 # memory per node, number of CPUs/node.
 
 # NOTE: Number of CPUs per GPU must be an even number since there are
 # 2 threads per core. If an odd number is requested the next higher
 # even number gets used. 
 
-# The following are one set of SBATCH options for the Venado GPU
+# The following are one set of SBATCH options for the Chicoma GPU
 # partition. There are optional other constraints.
 
 #SBATCH --job-name=l5e-4_reward_s<studyIDX>_e<epochIDX>
