@@ -1,4 +1,4 @@
-"""Train a Gaussian Policy network using DDP."""
+"""Train a Reward network using DDP."""
 
 import os
 import time
