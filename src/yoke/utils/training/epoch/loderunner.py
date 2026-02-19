@@ -427,36 +427,36 @@ def train_DDP_loderunner_epoch(
                 np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Validation loop
-    if epochIDX % train_per_val == 0:
-        print("Validating...", epochIDX)
-        val_rcrd_filename = val_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
-        model.eval()
-        with (
-            open(val_rcrd_filename, "a") if rank == 0 else nullcontext()
-        ) as val_rcrd_file:
-            with torch.no_grad():
-                for valbatch_ID, valdata in enumerate(validation_data):
-                    # Stop when number of training batches is reached
-                    if valbatch_ID >= num_val_batches:
-                        break
+    #if epochIDX % train_per_val == 0:
+    #    print("Validating...", epochIDX)
+    #    val_rcrd_filename = val_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
+    #    model.eval()
+    #    with (
+    #        open(val_rcrd_filename, "a") if rank == 0 else nullcontext()
+    #    ) as val_rcrd_file:
+    #        with torch.no_grad():
+    #            for valbatch_ID, valdata in enumerate(validation_data):
+    #                # Stop when number of training batches is reached
+    #                if valbatch_ID >= num_val_batches:
+    #                    break
                     
-                    eval_fn  = dataset_fns["eval"]
-                    end_img, pred_img, val_losses = eval_fn(
-                        valdata,
-                        model,
-                        loss_fn,
-                        device,
-                        rank,
-                        world_size
-                    )
+    #                eval_fn  = dataset_fns["eval"]
+    #                end_img, pred_img, val_losses = eval_fn(
+    #                    valdata,
+    #                    model,
+    #                    loss_fn,
+    #                    device,
+    #                    rank,
+    #                    world_size
+    #                )
 
-                    # Save validation record (rank 0 only)
-                    if rank == 0:
-                        batch_records = np.column_stack(
-                            [
-                                np.full(len(val_losses), epochIDX),
-                                np.full(len(val_losses), valbatch_ID),
-                                val_losses.cpu().numpy().flatten(),
-                            ]
-                        )
-                        np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
+    #                # Save validation record (rank 0 only)
+    #                if rank == 0:
+    #                    batch_records = np.column_stack(
+    #                        [
+    #                            np.full(len(val_losses), epochIDX),
+    #                            np.full(len(val_losses), valbatch_ID),
+    #                            val_losses.cpu().numpy().flatten(),
+    #                        ]
+    #                    )
+    #                    np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
