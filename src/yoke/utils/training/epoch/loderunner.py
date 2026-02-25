@@ -8,6 +8,7 @@ from contextlib import nullcontext
 from yoke.utils.training.datastep.loderunner import (
     train_loderunner_datastep,
     eval_loderunner_datastep,
+    eval_loderunner_datastep_cylex,
     train_scheduled_loderunner_datastep,
     eval_scheduled_loderunner_datastep,
     train_DDP_loderunner_datastep,
@@ -18,12 +19,14 @@ from yoke.utils.training.datastep.loderunner import (
 
 DATASTEP_FN = {
     "pli": {
-        "train": train_DDP_loderunner_datastep,
-        "eval": eval_DDP_loderunner_datastep,
+        "train_ddp": train_DDP_loderunner_datastep,
+        "eval_ddp": eval_DDP_loderunner_datastep,
+        "eval": eval_loderunner_datastep
     },
     "cylex": {
-        "train": train_DDP_loderunner_datastep_cylex,
-        "eval": eval_DDP_loderunner_datastep_cylex,
+        "train_ddp": train_DDP_loderunner_datastep_cylex,
+        "eval_ddp": eval_DDP_loderunner_datastep_cylex,
+        "eval": eval_loderunner_datastep_cylex
     },
 }
 
@@ -405,7 +408,7 @@ def train_DDP_loderunner_epoch(
             if dataset_fns is None:
                 raise ValueError(f"Unsupported dataset: {dataset}")
 
-            train_fn = dataset_fns["train"]
+            train_fn = dataset_fns["train_ddp"]
 
             # Training
             truth, pred, train_losses = train_fn(
@@ -427,36 +430,104 @@ def train_DDP_loderunner_epoch(
                 np.savetxt(train_rcrd_file, batch_records, fmt="%d, %d, %.8f")
 
     # Validation loop
-    #if epochIDX % train_per_val == 0:
-    #    print("Validating...", epochIDX)
-    #    val_rcrd_filename = val_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
-    #    model.eval()
-    #    with (
-    #        open(val_rcrd_filename, "a") if rank == 0 else nullcontext()
-    #    ) as val_rcrd_file:
-    #        with torch.no_grad():
-    #            for valbatch_ID, valdata in enumerate(validation_data):
-    #                # Stop when number of training batches is reached
-    #                if valbatch_ID >= num_val_batches:
-    #                    break
+    if epochIDX % train_per_val == 0:
+        print("Validating...", epochIDX)
+        val_rcrd_filename = val_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
+        model.eval()
+        with (
+            open(val_rcrd_filename, "a") if rank == 0 else nullcontext()
+        ) as val_rcrd_file:
+            with torch.no_grad():
+                for valbatch_ID, valdata in enumerate(validation_data):
+                    # Stop when number of training batches is reached
+                    if valbatch_ID >= num_val_batches:
+                        break
                     
-    #                eval_fn  = dataset_fns["eval"]
-    #                end_img, pred_img, val_losses = eval_fn(
-    #                    valdata,
-    #                    model,
-    #                    loss_fn,
-    #                    device,
-    #                    rank,
-    #                    world_size
-    #                )
+                    eval_fn  = dataset_fns["eval_ddp"]
+                    end_img, pred_img, val_losses = eval_fn(
+                        valdata,
+                        model,
+                        loss_fn,
+                        device,
+                        rank,
+                        world_size
+                    )
 
-    #                # Save validation record (rank 0 only)
-    #                if rank == 0:
-    #                    batch_records = np.column_stack(
-    #                        [
-    #                            np.full(len(val_losses), epochIDX),
-    #                            np.full(len(val_losses), valbatch_ID),
-    #                            val_losses.cpu().numpy().flatten(),
-    #                        ]
-    #                    )
-    #                    np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
+                    # Save validation record (rank 0 only)
+                    if rank == 0:
+                        batch_records = np.column_stack(
+                            [
+                                np.full(len(val_losses), epochIDX),
+                                np.full(len(val_losses), valbatch_ID),
+                                val_losses.cpu().numpy().flatten(),
+                            ]
+                        )
+                        np.savetxt(val_rcrd_file, batch_records, fmt="%d, %d, %.8f")
+
+
+def eval_loderunner_epoch(
+    testing_data: torch.utils.data.DataLoader,
+    num_test_batches: int,
+    model: torch.nn.Module,
+    channel_map: list[int],
+    loss_fn: torch.nn.Module,
+    epochIDX: int,
+    test_rcrd_filename: str,
+    device: torch.device,
+    dataset: str = "pli",
+) -> None:
+    """LodeRunner Evaluation-Only Epoch.
+
+    Function to complete a testing epoch on the LodeRunner architecture with
+    fixed channels in the input and output. Testing information is saved to successive
+    CSV files.
+
+    Args:
+        testing_data (torch.utils.data.DataLoader): testing dataloader
+        num_test_batches (int): Number of batches in training epoch
+        model (torch.nn.Module): model to train
+        channel_map (list[int]): list of channel indices to use
+        loss_fn (torch.nn.Module): loss function for training set
+        epochIDX (int): Index of current training epoch
+        test_rcrd_filename (str): Name of CSV file to save testing sample stats to
+        device (torch.device): device index to select
+
+    """
+    # Initialize things to save
+    testbatch_ID = 0
+
+    # Testing loop
+    model.eval()
+    test_rcrd_filename = test_rcrd_filename.replace("<epochIDX>", f"{epochIDX:04d}")
+
+    # Get correct datastep function
+    dataset_fns = DATASTEP_FN.get(dataset)
+    if dataset_fns is None:
+        raise ValueError(f"Unsupported dataset: {dataset}")
+
+    eval_fn  = dataset_fns["eval"]
+
+    with open(test_rcrd_filename, "a") as test_rcrd_file:
+        for testbatch_ID, testdata in enumerate(testing_data):
+            # Stop when number of training batches is reached
+            if testbatch_ID >= num_test_batches:
+                break
+
+            # Perform a single test step
+            end_img, pred_img, test_losses = eval_fn(
+                testdata,
+                model,
+                loss_fn,
+                device,
+                channel_map,
+                )
+
+            # Save testing record
+            batch_records = np.column_stack(
+                [
+                    np.full(len(test_losses), epochIDX),
+                    np.full(len(test_losses), testbatch_ID),
+                    test_losses.cpu().detach().numpy().flatten(),
+                ]
+            )
+            np.savetxt(test_rcrd_file, batch_records, fmt="%d, %d, %.8f")
